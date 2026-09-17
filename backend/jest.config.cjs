@@ -2,6 +2,8 @@
 module.exports = {
   preset: 'ts-jest',
   testEnvironment: 'node',
+  // Load .env.test so TEST_DATABASE_URL is available in integration tests
+  setupFiles: ['<rootDir>/src/test/loadEnv.cjs'],
   transform: {
     '^.+\\.tsx?$': [
       'ts-jest',

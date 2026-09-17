@@ -1,0 +1,47 @@
+// DeterminEat — Prisma schema
+// Docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ---------------------------------------------------------------------------
+// User
+// Primary key is the Cognito sub (UUID string) — we never store passwords.
+// Created on first authenticated API call if the user doesn't exist yet.
+// ---------------------------------------------------------------------------
+model User {
+  id          String       @id // Cognito sub
+  restaurants Restaurant[]
+  createdAt   DateTime     @default(now()) @map("created_at")
+
+  @@map("users")
+}
+
+// ---------------------------------------------------------------------------
+// Restaurant
+// Each entry belongs to exactly one user and is invisible to all others.
+// ---------------------------------------------------------------------------
+model Restaurant {
+  id              String   @id @default(cuid())
+  userId          String   @map("user_id")
+  name            String
+  cuisineType     String   @map("cuisine_type")
+  googleMapsUrl   String?  @map("google_maps_url")
+  visitDate       DateTime @map("visit_date") @db.Date
+  rating          Int // 1–5
+  wouldVisitAgain Boolean  @map("would_visit_again")
+  notes           String?
+  createdAt       DateTime @default(now()) @map("created_at")
+  updatedAt       DateTime @updatedAt @map("updated_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@map("restaurants")
+}

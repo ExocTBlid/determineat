@@ -110,21 +110,24 @@ determineat/
 
 ```
 User
-├── id          String  @id  (Cognito sub)
-└── restaurants Restaurant[]
+├── id              String    @id  (Cognito sub)
+├── createdAt       DateTime  @default(now())
+└── restaurants     Restaurant[]
 
 Restaurant
 ├── id              String    @id @default(cuid())
-├── userId          String    (FK → User.id)
+├── userId          String    (FK → User.id, cascade delete)
 ├── name            String
 ├── cuisineType     String
 ├── googleMapsUrl   String?
-├── visitDate       DateTime
+├── visitDate       DateTime  @db.Date
 ├── rating          Int       (1–5)
 ├── wouldVisitAgain Boolean
 ├── notes           String?
 ├── createdAt       DateTime  @default(now())
 └── updatedAt       DateTime  @updatedAt
+
+Indexes: restaurants(userId)
 ```
 
 ## CI/CD Pipeline Flow

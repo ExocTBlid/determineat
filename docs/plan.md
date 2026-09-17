@@ -43,11 +43,12 @@ Build a secure, full-stack web app where a registered user can log restaurants t
 
 ---
 
-### Task 2: Database schema and Prisma setup
+### Task 2: Database schema and Prisma setup ✓
 - **Objective:** Define the data model and get Prisma migrations working against local PostgreSQL
 - **Implementation:** Add Prisma to the backend package; define schema with two models — `User` (Cognito sub as primary key) and `Restaurant` (id, userId, name, cuisineType, googleMapsUrl, visitDate, rating, wouldVisitAgain, notes, createdAt, updatedAt); run initial migration; generate Prisma client
 - **Tests:** Write a Jest unit test that uses a test DB via docker-compose to verify create/read/delete operations on `Restaurant`
 - **Demo:** Running the migration creates the tables; the test suite passes confirming schema is correct
+- **Completed:** `@prisma/client` + `prisma` 5.19.1 added. Schema defined with `User` (Cognito sub PK) and `Restaurant` (cuid PK, all fields, `@@index` on userId, cascade delete on user removal). Prisma client singleton at `src/lib/prisma.ts`. `docker-compose.yml` extended with `postgres_test` on port 5433. Migration `20260917222333_init` created and applied. 6 integration tests written (`restaurant.db.test.ts`) covering create, list, read, update, delete, user scoping, and rating values — all pass. Tests use `describe.skip` when `TEST_DATABASE_URL` is absent so CI without a DB still passes.
 
 ---
 
