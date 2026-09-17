@@ -1,0 +1,16 @@
+# Development Dockerfile — live reload via node --watch
+# Production multi-stage Dockerfile lives at repo root (Task 7)
+FROM node:20-alpine
+
+WORKDIR /app
+
+# Install dependencies first (better layer caching)
+COPY package.json package-lock.json* ./
+RUN npm install
+
+# Copy source (also mounted as a volume for live reload)
+COPY . .
+
+EXPOSE 3000
+
+CMD ["node", "--watch", "--experimental-transform-types", "src/index.ts"]

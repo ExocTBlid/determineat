@@ -1,0 +1,38 @@
+# Dependencies
+node_modules/
+
+# Build outputs
+dist/
+build/
+coverage/
+
+# Environment files — never commit secrets
+.env
+.env.local
+.env.*.local
+
+# Terraform — state files contain sensitive data
+infra/.terraform/
+infra/*.tfstate
+infra/*.tfstate.backup
+infra/*.tfstate.*.backup
+infra/.terraform.lock.hcl
+infra/terraform.tfvars
+
+# Editor / OS
+.DS_Store
+Thumbs.db
+*.swp
+*.swo
+.vscode/
+.idea/
+
+# Logs
+*.log
+npm-debug.log*
+
+# Docker
+.dockerignore
+
+# Prisma generated client (regenerated on install/migrate)
+backend/src/generated/

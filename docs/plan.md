@@ -34,11 +34,12 @@ Build a secure, full-stack web app where a registered user can log restaurants t
 
 ## Task Breakdown
 
-### Task 1: Monorepo scaffold and local dev environment
+### Task 1: Monorepo scaffold and local dev environment ✓
 - **Objective:** Create the repo structure with `frontend/`, `backend/`, `infra/`, and root-level tooling config
 - **Implementation:** Initialize with npm workspaces; set up TypeScript configs for both frontend (React/Vite) and backend (Express); add ESLint + Prettier configs shared across packages; add a root `docker-compose.yml` that runs Express + a local PostgreSQL container for development
 - **Tests:** Confirm both `frontend` and `backend` TypeScript compile without errors; `docker-compose up` starts both services
 - **Demo:** Running `docker-compose up` starts a local Express server and PostgreSQL; hitting `localhost:3000` returns a health-check response
+- **Completed:** Monorepo scaffold created. npm workspaces (`frontend/`, `backend/`). Shared tooling: `tsconfig.base.json`, `eslint.config.mjs` (flat config), `.prettierrc`. Backend: Express skeleton with `GET /health`, Jest + Supertest, `tsconfig.json` + `tsconfig.test.json`. Frontend: React 18 + Vite + Vitest + RTL, placeholder `App.tsx`. `docker-compose.yml`: `postgres:16-alpine` + backend with live-reload. `backend/Dockerfile.dev` for local container. Runtime verified: `npm install` ✓, `npm run typecheck` ✓ (both packages), `npm test` ✓ (2 tests pass — backend `/health` + frontend `App` render).
 
 ---
 

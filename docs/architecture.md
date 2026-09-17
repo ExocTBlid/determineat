@@ -57,13 +57,28 @@ graph TD
 determineat/
 ├── frontend/               # React + Vite application
 │   ├── src/
+│   │   ├── __tests__/      # Vitest + React Testing Library tests
+│   │   ├── test/           # Test setup (jest-dom)
+│   │   ├── App.tsx
+│   │   └── main.tsx
 │   ├── index.html
+│   ├── vite.config.ts
+│   ├── tsconfig.json
+│   ├── .env.example
 │   └── package.json
 ├── backend/                # Express + Prisma API
 │   ├── src/
-│   ├── prisma/
+│   │   ├── __tests__/      # Jest + Supertest tests
+│   │   ├── app.ts          # Express app (importable for testing)
+│   │   └── index.ts        # Entry point (starts server)
+│   ├── prisma/             # Added in Task 2
+│   ├── Dockerfile.dev      # Local development container
+│   ├── jest.config.cjs
+│   ├── tsconfig.json
+│   ├── tsconfig.test.json
+│   ├── .env.example
 │   └── package.json
-├── infra/                  # Terraform infrastructure
+├── infra/                  # Terraform infrastructure (Task 8)
 │   ├── modules/
 │   │   ├── vpc/
 │   │   ├── ecs/
@@ -75,12 +90,19 @@ determineat/
 │   └── terraform.tfvars.example
 ├── .github/
 │   └── workflows/
-│       └── deploy.yml
+│       └── deploy.yml      # Added in Task 9
 ├── docs/
 │   ├── plan.md
 │   └── architecture.md
-├── docker-compose.yml      # Local development
-├── Dockerfile              # Production multi-stage build
+├── .kiro/
+│   └── steering/
+│       └── documentation.md
+├── docker-compose.yml      # Local development (postgres + backend)
+├── Dockerfile              # Production multi-stage build (Task 7)
+├── eslint.config.mjs       # Shared ESLint (flat config)
+├── tsconfig.base.json      # Shared TypeScript base config
+├── .prettierrc
+├── .gitignore
 └── README.md
 ```
 
