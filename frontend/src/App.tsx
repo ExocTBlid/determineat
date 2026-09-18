@@ -1,12 +1,11 @@
 import { Authenticator, useAuthenticator } from '@aws-amplify/ui-react';
 import '@aws-amplify/ui-react/styles.css';
+import RestaurantsPage from './components/RestaurantsPage.js';
 
 /**
  * The authenticated application shell.
- * Rendered only after a successful Cognito login. Displays the signed-in
- * user's email and a sign-out button.
- *
- * Task 6 will replace the placeholder body with the restaurant list and forms.
+ * Rendered only after a successful Cognito login. Shows the signed-in user's
+ * email, a sign-out button, and the restaurant management page.
  */
 function AuthenticatedApp() {
   const { user, signOut } = useAuthenticator((context) => [context.user]);
@@ -35,10 +34,7 @@ function AuthenticatedApp() {
       </header>
 
       <section style={{ padding: '1rem' }}>
-        <p>Welcome back. Your restaurant log will appear here.</p>
-        <p>
-          <em>Coming soon (Task 6): add, view, and manage the restaurants you&apos;ve visited.</em>
-        </p>
+        <RestaurantsPage />
       </section>
     </main>
   );

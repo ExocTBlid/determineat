@@ -58,6 +58,10 @@ determineat/
 ├── frontend/               # React + Vite application
 │   ├── src/
 │   │   ├── __tests__/      # Vitest + React Testing Library tests
+│   │   ├── api/            # client.ts (token-authed fetch wrapper)
+│   │   ├── components/     # RestaurantsPage, RestaurantList,
+│   │   │                   #   AddEditRestaurant, StarRating
+│   │   ├── types/          # restaurant.ts (shared types)
 │   │   ├── test/           # Test setup (jest-dom)
 │   │   ├── amplifyConfig.ts # Cognito/Amplify configuration
 │   │   ├── vite-env.d.ts   # Typed VITE_ env vars

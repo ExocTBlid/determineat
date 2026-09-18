@@ -2,15 +2,24 @@
 # Production multi-stage Dockerfile lives at repo root (Task 7)
 FROM node:20-alpine
 
+# Prisma needs OpenSSL present on Alpine to load its query engine
+RUN apk add --no-cache openssl
+
 WORKDIR /app
 
 # Install dependencies first (better layer caching)
 COPY package.json package-lock.json* ./
 RUN npm install
 
-# Copy source (also mounted as a volume for live reload)
+# Copy the Prisma schema and generate the client before the app starts.
+# Without this the runtime import of @prisma/client fails.
+COPY prisma ./prisma
+RUN npx prisma generate
+
+# Copy source (src is also mounted as a volume for live reload)
 COPY . .
 
 EXPOSE 3000
 
-CMD ["node", "--watch", "--experimental-transform-types", "src/index.ts"]
+# Apply any pending migrations, then start the watch server.
+CMD ["sh", "-c", "npx prisma migrate deploy && npx tsx watch src/index.ts"]

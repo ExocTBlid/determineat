@@ -79,11 +79,12 @@ Build a secure, full-stack web app where a registered user can log restaurants t
 
 ---
 
-### Task 6: React frontend — restaurant list and add/edit UI
+### Task 6: React frontend — restaurant list and add/edit UI ✓
 - **Objective:** Build the main app screens for viewing and managing restaurant entries
 - **Implementation:** Build a `RestaurantList` page showing all entries in a card/table layout with cuisine type, rating (star display), and a "Would Visit Again" badge; build an `AddEditRestaurant` form with fields for all metadata; wire both to the backend API using `fetch` with the Cognito access token in the `Authorization` header; add a Google Maps link that opens in a new tab
 - **Tests:** Vitest + React Testing Library — test list renders from mocked API response, form submission calls the correct API endpoint, and empty state is shown when no restaurants exist
 - **Demo:** Logged-in user can see their restaurant list, add a new entry via the form, edit it, and delete it — all persisted to the backend
+- **Completed:** `src/types/restaurant.ts` (Restaurant + RestaurantInput). `src/api/client.ts` — typed fetch wrapper that pulls the Cognito access token from `fetchAuthSession()` and sends it as `Authorization: Bearer`, with error extraction and 204 handling. Components: `StarRating` (★/☆ with aria-label), `RestaurantList` (cards with cuisine, rating, would-visit-again badge, formatted visit date, notes, Google Maps link in a new tab, Edit/Delete; empty state), `AddEditRestaurant` (controlled form for all fields, edit mode pre-fills, submit error handling), `RestaurantsPage` (container: loads on mount, list/add/edit view state, optimistic delete, reload after mutations). Wired into the authenticated shell in `App.tsx`. 4 Vitest tests (mocking the API client): list renders from API, empty state, create submits correct payload, delete calls endpoint. All 33 tests pass (6 frontend + 27 backend); typecheck clean; production build succeeds (~570 kB).
 
 ---
 

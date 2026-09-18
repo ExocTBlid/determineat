@@ -44,47 +44,80 @@ Built with TypeScript full-stack (React + Express), deployed to AWS ECS Fargate 
 ### Prerequisites
 
 - [Node.js](https://nodejs.org/) v20+
-- [Docker](https://www.docker.com/) and Docker Compose
+- [Docker](https://www.docker.com/) with the Compose v2 plugin (use `docker compose`, not `docker-compose`)
 - [AWS CLI](https://aws.amazon.com/cli/) (for deployment)
 - [Terraform](https://www.terraform.io/) v1.5+ (for infrastructure)
 
+> **Heads up on authentication:** the app authenticates against a real AWS Cognito
+> user pool. Without one, the backend and `/health` still run, but you can't log in
+> through the UI or call the `/api/*` endpoints (they require a valid Cognito JWT).
+> The full test suite runs without any AWS resources. To exercise the real sign-in
+> flow, provision Cognito via Terraform (Task 8) or create a pool manually — see
+> [`docs/cognito.md`](docs/cognito.md).
+
 ### Getting Started
 
-1. **Clone the repo**
+1. **Clone the repo and install dependencies**
    ```bash
    git clone https://github.com/your-username/determineat.git
    cd determineat
-   ```
-
-2. **Install dependencies**
-   ```bash
    npm install
    ```
 
-3. **Start local services**
+2. **Create the env files**
    ```bash
-   docker-compose up
+   cp backend/.env.example backend/.env
+   cp frontend/.env.example frontend/.env
    ```
-   This starts:
-   - Express API at `http://localhost:3000`
-   - PostgreSQL at `localhost:5432` (replaces Aurora for local dev)
+   Fill in the `COGNITO_*` / `VITE_COGNITO_*` values if you have a user pool
+   (see [`docs/cognito.md`](docs/cognito.md)). The defaults are fine for starting
+   the server and running tests.
 
-4. **Run database migrations**
+3. **Start PostgreSQL**
    ```bash
-   cd backend
-   npx prisma migrate dev
+   docker compose up -d postgres
+   ```
+   PostgreSQL listens on `localhost:5432`.
+
+4. **Run the database migration** (generates the Prisma client too)
+   ```bash
+   npm run db:migrate --workspace @determineat/backend
    ```
 
-5. **Start the frontend dev server** (separate terminal)
+5. **Start the backend** (separate terminal, from repo root)
    ```bash
-   cd frontend
-   npm run dev
+   npm run dev --workspace @determineat/backend
    ```
-   Frontend available at `http://localhost:5173`
+   API at `http://localhost:3000`. Verify with:
+   ```bash
+   curl http://localhost:3000/health   # -> {"status":"ok"}
+   ```
+
+6. **Start the frontend** (separate terminal, from repo root)
+   ```bash
+   npm run dev --workspace @determineat/frontend
+   ```
+   UI at `http://localhost:5173`. API requests are proxied to the backend.
+
+### Alternative: run the backend in Docker
+
+Instead of steps 3–5, you can run PostgreSQL and the backend together in
+containers (the backend image applies migrations on startup):
+
+```bash
+docker compose up -d postgres backend
+```
+
+The backend container runs on `http://localhost:3000` with live reload from the
+mounted `backend/src` directory.
 
 ### Environment Variables
 
-Copy `.env.example` to `.env` in the `backend/` directory:
+Step 2 above creates these files from the checked-in `.env.example` templates.
+For a full explanation of the Cognito values and how they are used, see
+[`docs/cognito.md`](docs/cognito.md).
+
+**`backend/.env`**
 
 ```env
 # Database
@@ -100,7 +133,7 @@ PORT=3000
 NODE_ENV=development
 ```
 
-Copy `.env.example` to `.env` in the `frontend/` directory:
+**`frontend/.env`**
 
 ```env
 VITE_COGNITO_USER_POOL_ID=us-east-1_xxxxxxxxx
@@ -109,19 +142,39 @@ VITE_AWS_REGION=us-east-1
 VITE_API_URL=http://localhost:3000
 ```
 
+> The backend leaves `/health` and server startup working even with placeholder
+> Cognito values — the JWT verifier is created lazily on the first `/api/*`
+> request, so invalid Cognito config only fails authenticated calls, not boot.
+
 ---
 
 ## Running Tests
 
+The backend's DB integration tests run against a dedicated test database
+(the `postgres_test` service, on port 5433). Start it first, then run the suite:
+
 ```bash
-# All tests (from root)
+# Start the test database (once per session)
+docker compose up -d postgres_test
+
+# All tests (from repo root)
 npm test
 
 # Backend only
-cd backend && npm test
+npm test --workspace @determineat/backend
 
 # Frontend only
-cd frontend && npm test
+npm test --workspace @determineat/frontend
+```
+
+> The DB-backed tests skip automatically when `TEST_DATABASE_URL` is not set
+> (see `backend/.env.test`), so the suite still passes without the test database —
+> it just runs fewer cases. Frontend tests never need a database.
+
+To type-check both packages:
+
+```bash
+npm run typecheck
 ```
 
 ---
