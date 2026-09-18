@@ -88,11 +88,12 @@ Build a secure, full-stack web app where a registered user can log restaurants t
 
 ---
 
-### Task 7: Docker image — production build
+### Task 7: Docker image — production build ✓
 - **Objective:** Create a multi-stage Dockerfile that builds the React app and serves it from Express
 - **Implementation:** Multi-stage Dockerfile — stage 1 builds the React app with Vite; stage 2 builds the Express backend; stage 3 is the production image that copies both builds, with Express serving static files from `public/` and falling back to `index.html` for client-side routing
 - **Tests:** Build the image locally (`docker build`), run it with environment variables pointing to local Postgres, confirm `localhost:3000` serves the React app and API routes work
 - **Demo:** Single `docker run` starts the full app — React UI served at `/`, API available at `/api/*`
+- **Completed:** `app.ts` serves the SPA in production — when `PUBLIC_DIR` exists it mounts `express.static` and adds an SPA fallback (regex excludes `/api/` and `/health`) so refreshes on client routes return `index.html`. `PUBLIC_DIR` is resolved from `cwd` (no `import.meta`) so it works under both the ESM runtime and the CJS test runner. Root `Dockerfile` — 3 stages: `frontend-build` (Vite), `backend-build` (openssl + `prisma generate` + `tsc`, with `tsconfig.base.json` copied in), `runtime` (prod deps + `prisma` CLI, generated Prisma client copied from build stage, compiled `dist/`, React build → `public/`; `CMD` runs `prisma migrate deploy` then `node dist/index.js`). `typescript` added to both packages' devDependencies (was only at the root, unavailable in the isolated Docker build). Root `.dockerignore` added. 5 static-serving tests added. **Verified against the real image:** built successfully, ran against a Postgres container — `/` serves the SPA (`<title>DeterminEat</title>`), `/some/spa/route` → 200 (fallback), `/health` → 200, `/api/restaurants` → 401, migrations applied on startup. All 38 tests pass; typecheck clean.
 
 ---
 

@@ -111,7 +111,8 @@ determineat/
 │   └── steering/
 │       └── documentation.md
 ├── docker-compose.yml      # Local development (postgres + backend)
-├── Dockerfile              # Production multi-stage build (Task 7)
+├── Dockerfile              # Production multi-stage build (SPA served by Express)
+├── .dockerignore
 ├── eslint.config.mjs       # Shared ESLint (flat config)
 ├── tsconfig.base.json      # Shared TypeScript base config
 ├── .prettierrc
