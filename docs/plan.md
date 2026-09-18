@@ -70,11 +70,12 @@ Build a secure, full-stack web app where a registered user can log restaurants t
 
 ---
 
-### Task 5: React frontend — auth flow with Cognito
+### Task 5: React frontend — auth flow with Cognito ✓
 - **Objective:** Build the login/register UI wired to Cognito using Amplify UI components
 - **Implementation:** Set up React with Vite inside `frontend/`; add `@aws-amplify/ui-react` for the Cognito auth UI; configure Amplify with User Pool ID and Client ID from environment variables; implement a simple authenticated shell that shows the user's email and a logout button
 - **Tests:** Vitest + React Testing Library — test that the login form renders, unauthenticated state shows the login screen, and mocked authenticated state shows the app shell
 - **Demo:** Opening the app in a browser shows the Cognito login page; registering and logging in shows the authenticated shell with the user's email
+- **Completed:** `aws-amplify` 6.6.0 + `@aws-amplify/ui-react` 6.1.14 added (v6 Gen2 config API). `src/amplifyConfig.ts` — `configureAmplify()` reads `VITE_COGNITO_*` env vars, warns if missing, calls `Amplify.configure` with the `Auth.Cognito` shape. `src/vite-env.d.ts` — typed env vars. `App.tsx` — `Authenticator` wraps an `AuthenticatedApp` shell that uses `useAuthenticator` to show the user's email (from `signInDetails.loginId`) and a Sign out button. `main.tsx` — calls `configureAmplify()` and wraps the app in `Authenticator.Provider`. 2 Vitest tests (mocking `@aws-amplify/ui-react`) verify the login screen shows when unauthenticated and the shell + email + sign-out show when authenticated. All 29 tests pass; typecheck clean; production `vite build` succeeds (bundle ~564 kB — Amplify is large, code-splitting noted as a future optimization).
 
 ---
 

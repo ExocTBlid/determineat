@@ -59,8 +59,10 @@ determineat/
 │   ├── src/
 │   │   ├── __tests__/      # Vitest + React Testing Library tests
 │   │   ├── test/           # Test setup (jest-dom)
-│   │   ├── App.tsx
-│   │   └── main.tsx
+│   │   ├── amplifyConfig.ts # Cognito/Amplify configuration
+│   │   ├── vite-env.d.ts   # Typed VITE_ env vars
+│   │   ├── App.tsx         # Authenticator + authenticated shell
+│   │   └── main.tsx        # Amplify.configure + Authenticator.Provider
 │   ├── index.html
 │   ├── vite.config.ts
 │   ├── tsconfig.json
@@ -99,7 +101,8 @@ determineat/
 │       └── deploy.yml      # Added in Task 9
 ├── docs/
 │   ├── plan.md
-│   └── architecture.md
+│   ├── architecture.md
+│   └── cognito.md          # Cognito setup, token model, verification
 ├── .kiro/
 │   └── steering/
 │       └── documentation.md
@@ -206,7 +209,7 @@ VPC: 10.0.0.0/16
 
 - ECS tasks run in private subnets with no direct internet access; outbound via NAT Gateway
 - Aurora cluster is in a dedicated DB subnet group, accessible only from the ECS security group
-- Cognito handles all credential management — the app never stores passwords
+- Cognito handles all credential management — the app never stores passwords (see [`cognito.md`](cognito.md) for the full setup and token model)
 - JWT verification happens on every `/api/*` request using `aws-jwt-verify`
 - All user data queries are scoped to the authenticated user's `sub` claim — no cross-user data access possible
 - Secrets (DB connection string, Cognito config) passed to ECS via AWS Secrets Manager / Parameter Store references in the task definition

@@ -1,6 +1,11 @@
 import { StrictMode } from 'react';
 import { createRoot } from 'react-dom/client';
+import { Authenticator } from '@aws-amplify/ui-react';
 import App from './App.js';
+import { configureAmplify } from './amplifyConfig.js';
+
+// Configure Amplify/Cognito before the app renders
+configureAmplify();
 
 const rootElement = document.getElementById('root');
 if (!rootElement) {
@@ -9,6 +14,8 @@ if (!rootElement) {
 
 createRoot(rootElement).render(
   <StrictMode>
-    <App />
+    <Authenticator.Provider>
+      <App />
+    </Authenticator.Provider>
   </StrictMode>,
 );

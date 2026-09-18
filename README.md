@@ -186,6 +186,8 @@ Every push to `main` automatically runs the full pipeline. Add the following sec
 
 See [`docs/architecture.md`](docs/architecture.md) for the full architecture diagram, component breakdown, and technology decision rationale.
 
+For the AWS Cognito setup — user pool and app client requirements, token model, and how the app verifies JWTs — see [`docs/cognito.md`](docs/cognito.md).
+
 ```
 Browser → ALB → ECS Fargate (Express + React) → Aurora Serverless v2
                       ↕
