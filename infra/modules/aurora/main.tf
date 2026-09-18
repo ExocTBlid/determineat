@@ -1,48 +1,3 @@
-variable "name_prefix" {
-  description = "Prefix for resource names"
-  type        = string
-}
-
-variable "vpc_id" {
-  description = "VPC ID"
-  type        = string
-}
-
-variable "private_subnet_ids" {
-  description = "Private subnet IDs for the DB subnet group"
-  type        = list(string)
-}
-
-variable "ingress_security_group_id" {
-  description = "Security group allowed to connect to the database (the ECS tasks SG)"
-  type        = string
-}
-
-variable "db_name" {
-  description = "Application database name"
-  type        = string
-}
-
-variable "master_username" {
-  description = "Master username"
-  type        = string
-}
-
-variable "min_capacity" {
-  description = "Serverless v2 minimum ACU"
-  type        = number
-}
-
-variable "max_capacity" {
-  description = "Serverless v2 maximum ACU"
-  type        = number
-}
-
-variable "backup_retention_days" {
-  description = "Automated backup retention in days"
-  type        = number
-}
-
 # ---------------------------------------------------------------------------
 # Aurora Serverless v2 (PostgreSQL-compatible)
 #
@@ -137,19 +92,4 @@ resource "aws_secretsmanager_secret_version" "database_url" {
     aws_rds_cluster.this.endpoint,
     var.db_name,
   )
-}
-
-output "cluster_endpoint" {
-  description = "Aurora cluster writer endpoint"
-  value       = aws_rds_cluster.this.endpoint
-}
-
-output "database_url_secret_arn" {
-  description = "ARN of the Secrets Manager secret holding DATABASE_URL"
-  value       = aws_secretsmanager_secret.database_url.arn
-}
-
-output "db_security_group_id" {
-  description = "Security group ID of the database"
-  value       = aws_security_group.db.id
 }

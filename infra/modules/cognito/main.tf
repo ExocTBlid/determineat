@@ -1,18 +1,3 @@
-variable "name_prefix" {
-  description = "Prefix for resource names"
-  type        = string
-}
-
-variable "callback_urls" {
-  description = "Allowed OAuth callback URLs for the app client"
-  type        = list(string)
-}
-
-variable "logout_urls" {
-  description = "Allowed sign-out URLs for the app client"
-  type        = list(string)
-}
-
 # ---------------------------------------------------------------------------
 # Cognito user pool + public app client.
 # Satisfies the spec in docs/cognito.md:
@@ -90,19 +75,4 @@ resource "aws_cognito_user_pool_client" "this" {
 
   # Prevent user existence errors from leaking whether an account exists
   prevent_user_existence_errors = "ENABLED"
-}
-
-output "user_pool_id" {
-  description = "Cognito user pool ID"
-  value       = aws_cognito_user_pool.this.id
-}
-
-output "user_pool_client_id" {
-  description = "Cognito app client ID (public, no secret)"
-  value       = aws_cognito_user_pool_client.this.id
-}
-
-output "user_pool_arn" {
-  description = "Cognito user pool ARN"
-  value       = aws_cognito_user_pool.this.arn
 }
