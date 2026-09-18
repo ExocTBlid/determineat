@@ -52,11 +52,12 @@ Build a secure, full-stack web app where a registered user can log restaurants t
 
 ---
 
-### Task 3: Express backend — auth middleware and base API
+### Task 3: Express backend — auth middleware and base API ✓
 - **Objective:** Scaffold the Express app with Cognito JWT verification middleware and a protected route structure
 - **Implementation:** Set up Express with TypeScript; add `aws-jwt-verify` to validate Cognito access tokens on all `/api` routes; implement a `GET /health` (unauthenticated) and a `GET /api/me` endpoint that returns the decoded Cognito user claims; add error handling middleware
 - **Tests:** Jest + Supertest — test that `/health` returns 200, `/api/me` with no token returns 401, and `/api/me` with a valid mock JWT returns 200 with user info (mock the JWT verifier)
 - **Demo:** `curl localhost:3000/health` → 200; `curl localhost:3000/api/me` without token → 401
+- **Completed:** `aws-jwt-verify` 4.0.1 added. `src/middleware/auth.ts` — `requireAuth` middleware using `CognitoJwtVerifier`, strips Bearer prefix, returns 401 on missing/malformed/invalid token. `src/types/express.d.ts` — augments `Express.Request` with `req.user?: CognitoAccessTokenPayload`. `src/routes/me.ts` — `GET /api/me` returns `{sub, username, email}`. `app.ts` updated with `/api/me` route and 4-param global error handler. 5 new auth tests (mocking `aws-jwt-verify`) plus health test updated to include mock. All 14 tests pass.
 
 ---
 

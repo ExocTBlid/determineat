@@ -1,4 +1,6 @@
 import express from 'express';
+import type { Request, Response, NextFunction } from 'express';
+import meRouter from './routes/me.js';
 
 const app = express();
 
@@ -8,14 +10,25 @@ app.use(express.json());
 // ---------------------------------------------------------------------------
 // Health check — unauthenticated, used by ECS health checks and local dev
 // ---------------------------------------------------------------------------
-app.get('/health', (_req, res) => {
+app.get('/health', (_req: Request, res: Response) => {
   res.status(200).json({ status: 'ok' });
 });
 
 // ---------------------------------------------------------------------------
-// API routes (to be added in subsequent tasks)
+// API routes
 // ---------------------------------------------------------------------------
-// Task 3: auth middleware + /api/me
-// Task 4: /api/restaurants CRUD
+app.use('/api/me', meRouter);
+
+// Task 4: /api/restaurants CRUD will be added here
+
+// ---------------------------------------------------------------------------
+// Global error handler — catches any error passed to next(err)
+// Must be defined last with four parameters so Express recognises it.
+// ---------------------------------------------------------------------------
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
+app.use((err: Error, _req: Request, res: Response, _next: NextFunction) => {
+  console.error(err.stack ?? err.message);
+  res.status(500).json({ error: 'Internal server error' });
+});
 
 export default app;
