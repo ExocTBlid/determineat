@@ -11,13 +11,15 @@ coverage/
 .env.local
 .env.*.local
 
-# Terraform — state files contain sensitive data
+# Terraform
+# .terraform/ is the local provider cache; state files may contain secrets.
+# The .terraform.lock.hcl (provider version lock) IS committed — do not ignore it.
 infra/.terraform/
 infra/*.tfstate
 infra/*.tfstate.backup
 infra/*.tfstate.*.backup
-infra/.terraform.lock.hcl
 infra/terraform.tfvars
+infra/backend.hcl
 
 # Editor / OS
 .DS_Store
@@ -30,9 +32,6 @@ Thumbs.db
 # Logs
 *.log
 npm-debug.log*
-
-# Docker
-.dockerignore
 
 # Prisma generated client (regenerated on install/migrate)
 backend/src/generated/

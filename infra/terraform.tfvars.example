@@ -1,0 +1,19 @@
+# Copy to terraform.tfvars and adjust for your deployment.
+# terraform.tfvars is gitignored — never commit real values.
+
+aws_region   = "us-east-1"
+environment  = "prod"
+project_name = "determineat"
+
+# Container image pushed to ECR. CI overrides this with a SHA-tagged image.
+# Leave empty for the first apply; the ECS service will use a placeholder.
+container_image = ""
+
+# HTTPS: provide an ACM cert ARN (in the same region) and the public app URL.
+# Without a cert, only an HTTP listener is created.
+acm_certificate_arn = ""
+app_domain_url      = ""
+
+# Database sizing (Aurora Serverless v2 ACUs)
+aurora_min_capacity = 0.5
+aurora_max_capacity = 2

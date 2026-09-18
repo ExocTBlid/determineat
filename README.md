@@ -199,21 +199,40 @@ npm run typecheck
      --region us-east-1
    ```
 
-2. **Configure Terraform variables**
+2. **Configure Terraform variables and backend**
    ```bash
    cd infra
    cp terraform.tfvars.example terraform.tfvars
-   # Edit terraform.tfvars with your AWS region, domain name, etc.
+   # Edit terraform.tfvars: AWS region, ACM cert ARN, app domain URL, etc.
+
+   cp backend.hcl.example backend.hcl
+   # Edit backend.hcl to reference the S3 bucket + DynamoDB table from step 1
    ```
 
 3. **Apply infrastructure**
    ```bash
    cd infra
-   terraform init
+   terraform init -backend-config=backend.hcl
    terraform apply
    ```
 
-   This provisions: VPC, ECS cluster, Aurora Serverless v2, Cognito User Pool, ALB, ECR, CloudWatch log group, and all supporting IAM roles.
+   This provisions: VPC (2 AZs, public/private subnets, NAT), ECS Fargate
+   cluster + service, Aurora Serverless v2, Cognito user pool + app client,
+   ALB, ECR, CloudWatch log group, and all supporting IAM roles and security
+   groups.
+
+4. **Wire the outputs into your environment**
+
+   After `apply`, Terraform prints the values the app needs:
+   ```bash
+   terraform output
+   # cognito_user_pool_id, cognito_client_id  -> frontend build + backend env
+   # ecr_repository_url                       -> CI image push target
+   # alb_dns_name                             -> the public app URL
+   ```
+   The database connection string is managed automatically — Terraform stores
+   it in AWS Secrets Manager and the ECS task reads it at startup, so you never
+   handle `DATABASE_URL` in production by hand.
 
 ### GitHub Actions (Automated Deployments)
 

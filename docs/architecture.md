@@ -90,16 +90,21 @@ determineat/
 │   ├── tsconfig.test.json
 │   ├── .env.example
 │   └── package.json
-├── infra/                  # Terraform infrastructure (Task 8)
+├── infra/                  # Terraform infrastructure
 │   ├── modules/
-│   │   ├── vpc/
-│   │   ├── ecs/
-│   │   ├── aurora/
-│   │   ├── cognito/
-│   │   └── alb/
-│   ├── main.tf
+│   │   ├── vpc/            # VPC, subnets, IGW, NAT, routes
+│   │   ├── ecr/            # container registry + lifecycle policy
+│   │   ├── cognito/        # user pool + public app client
+│   │   ├── aurora/         # Serverless v2 PostgreSQL + secret
+│   │   ├── alb/            # load balancer, target group, listeners
+│   │   └── ecs/            # cluster, task def, service, IAM, logs
+│   ├── main.tf             # module wiring
 │   ├── variables.tf
-│   └── terraform.tfvars.example
+│   ├── outputs.tf
+│   ├── security_groups.tf  # tasks SG (root-level, breaks module cycle)
+│   ├── versions.tf         # providers + S3 backend
+│   ├── terraform.tfvars.example
+│   └── backend.hcl.example
 ├── .github/
 │   └── workflows/
 │       └── deploy.yml      # Added in Task 9

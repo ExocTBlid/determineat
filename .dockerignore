@@ -1,0 +1,25 @@
+# Dependencies (reinstalled inside the image)
+**/node_modules
+
+# Build outputs
+**/dist
+**/build
+**/coverage
+
+# Env files — never bake secrets into the image
+**/.env
+**/.env.*
+!**/.env.example
+
+# Local dev / editor / VCS
+.git
+.gitignore
+.kiro
+**/*.log
+.vscode
+.idea
+
+# Docs and infra not needed in the runtime image
+docs
+infra
+README.md

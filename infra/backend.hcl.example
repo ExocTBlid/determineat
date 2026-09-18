@@ -1,0 +1,6 @@
+# Copy to backend.hcl and pass to: terraform init -backend-config=backend.hcl
+# These reference the S3 bucket + DynamoDB table you create once (see README).
+
+bucket         = "determineat-terraform-state"
+region         = "us-east-1"
+dynamodb_table = "determineat-terraform-lock"

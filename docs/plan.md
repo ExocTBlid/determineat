@@ -97,11 +97,12 @@ Build a secure, full-stack web app where a registered user can log restaurants t
 
 ---
 
-### Task 8: Terraform — core AWS infrastructure
+### Task 8: Terraform — core AWS infrastructure ✓
 - **Objective:** Define all AWS resources needed to run the app in Terraform
 - **Implementation:** Under `infra/`, create Terraform modules for: VPC (2 AZs, public/private subnets), ECR repository, Cognito User Pool + App Client, Aurora Serverless v2 cluster (PostgreSQL, private subnet group, automated backups with 7-day retention), ECS cluster + Fargate task definition + service, ALB with HTTPS listener (ACM cert), IAM roles for ECS task execution, CloudWatch log group; use S3 + DynamoDB for Terraform remote state; parameterize via `terraform.tfvars`
 - **Tests:** Run `terraform validate` and `terraform plan` against a dev workspace; verify resource counts match expectations
 - **Demo:** `terraform apply` provisions all infrastructure; the ECS service is running; ALB health check passes
+- **Completed:** Root config (`versions.tf`, `variables.tf`, `main.tf`, `outputs.tf`, `security_groups.tf`) plus five modules under `infra/modules/`: `vpc` (2 AZs, public/private subnets, IGW, single NAT), `ecr` (repo + scan-on-push + last-10 lifecycle), `cognito` (user pool + public app client, no secret, SRP+refresh, per `docs/cognito.md`), `aurora` (Serverless v2 PostgreSQL, private DB subnet group, SG locked to ECS, 7-day backups, `DATABASE_URL` in Secrets Manager), `alb` (public ALB, `/health` target group, HTTPS+HTTP-redirect when an ACM cert is set, HTTP-only fallback otherwise), `ecs` (cluster w/ Container Insights, Fargate task def pulling `DATABASE_URL` from Secrets Manager + Cognito IDs as env, execution/task IAM roles, CloudWatch log group, container health check). S3+DynamoDB remote state via `-backend-config` (`backend.hcl.example`). A cross-module dependency cycle (ECS needs the DB secret, Aurora needs the ECS SG) was broken by defining the tasks security group at the root. **Verified:** `terraform fmt` clean, `terraform init -backend=false` + `terraform validate` → "Success! The configuration is valid." (`plan`/`apply` require real AWS credentials, not run here.) Also fixed `.gitignore` to commit `.terraform.lock.hcl` (provider pinning) and stop ignoring `.dockerignore`.
 
 ---
 
