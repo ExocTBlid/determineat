@@ -61,11 +61,12 @@ Build a secure, full-stack web app where a registered user can log restaurants t
 
 ---
 
-### Task 4: Restaurant CRUD API endpoints
+### Task 4: Restaurant CRUD API endpoints ✓
 - **Objective:** Build the full REST API for managing restaurant entries, scoped to the authenticated user
 - **Implementation:** Implement `GET /api/restaurants`, `POST /api/restaurants`, `GET /api/restaurants/:id`, `PUT /api/restaurants/:id`, `DELETE /api/restaurants/:id`; all queries filter by `userId` from the JWT claims; validate request bodies with `zod`
 - **Tests:** Supertest integration tests for each endpoint — happy paths, 404 on missing records, 403 if user tries to access another user's record, and validation errors on bad input
 - **Demo:** Using a REST client (e.g., curl), authenticated requests can create, list, update, and delete restaurant entries
+- **Completed:** `src/schemas/restaurant.ts` — Zod create/update (partial) schemas. `src/services/restaurant.ts` — user-scoped queries (`ensureUser` upsert before create; update/delete verify ownership). `src/routes/restaurants.ts` — all 5 endpoints behind `requireAuth`, 201 on create, 204 on delete, 400 on validation failure, 404 on missing/cross-user records. Cross-user access returns 404 (record not visible) rather than 403, since queries are scoped by `userId` — this avoids leaking existence of other users' records. Wired at `/api/restaurants`. 13 API integration tests added covering create/list/read/update/delete happy paths, 401 unauthenticated, 400 validation (empty name, rating out of range, bad URL), and cross-user 404 isolation. All 27 tests pass; typecheck clean.
 
 ---
 

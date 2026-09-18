@@ -69,9 +69,15 @@ determineat/
 ├── backend/                # Express + Prisma API
 │   ├── src/
 │   │   ├── __tests__/      # Jest + Supertest tests
+│   │   ├── lib/            # prisma.ts (client singleton)
+│   │   ├── middleware/     # auth.ts (Cognito JWT verification)
+│   │   ├── routes/         # me.ts, restaurants.ts
+│   │   ├── schemas/        # restaurant.ts (Zod validation)
+│   │   ├── services/       # restaurant.ts (user-scoped DB logic)
+│   │   ├── types/          # express.d.ts (Request augmentation)
 │   │   ├── app.ts          # Express app (importable for testing)
 │   │   └── index.ts        # Entry point (starts server)
-│   ├── prisma/             # Added in Task 2
+│   ├── prisma/             # schema.prisma + migrations
 │   ├── Dockerfile.dev      # Local development container
 │   ├── jest.config.cjs
 │   ├── tsconfig.json
@@ -129,6 +135,28 @@ Restaurant
 
 Indexes: restaurants(userId)
 ```
+
+## API Endpoints
+
+All `/api/*` routes require a valid Cognito access token in the
+`Authorization: Bearer <token>` header. Every query is scoped to the
+authenticated user's `sub` claim, so users can only ever see their own data.
+
+| Method | Path | Auth | Description | Success |
+|---|---|---|---|---|
+| GET | `/health` | none | Liveness check for ECS/ALB | 200 |
+| GET | `/api/me` | required | Returns `{sub, username, email}` from the token | 200 |
+| GET | `/api/restaurants` | required | List the user's restaurants (newest visit first) | 200 |
+| POST | `/api/restaurants` | required | Create a restaurant | 201 |
+| GET | `/api/restaurants/:id` | required | Fetch one restaurant | 200 |
+| PUT | `/api/restaurants/:id` | required | Update a restaurant (partial body allowed) | 200 |
+| DELETE | `/api/restaurants/:id` | required | Delete a restaurant | 204 |
+
+Error responses:
+- **400** — request body fails Zod validation (returns `{error, details}`)
+- **401** — missing, malformed, or invalid token
+- **404** — record not found *or* owned by a different user (existence is not leaked)
+- **500** — unhandled error (caught by the global error handler)
 
 ## CI/CD Pipeline Flow
 

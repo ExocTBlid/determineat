@@ -1,6 +1,7 @@
 import express from 'express';
 import type { Request, Response, NextFunction } from 'express';
 import meRouter from './routes/me.js';
+import restaurantsRouter from './routes/restaurants.js';
 
 const app = express();
 
@@ -18,8 +19,7 @@ app.get('/health', (_req: Request, res: Response) => {
 // API routes
 // ---------------------------------------------------------------------------
 app.use('/api/me', meRouter);
-
-// Task 4: /api/restaurants CRUD will be added here
+app.use('/api/restaurants', restaurantsRouter);
 
 // ---------------------------------------------------------------------------
 // Global error handler — catches any error passed to next(err)
