@@ -35,3 +35,7 @@ npm-debug.log*
 
 # Prisma generated client (regenerated on install/migrate)
 backend/src/generated/
+
+# Python (bootstrap.py bytecode cache)
+__pycache__/
+*.py[cod]
