@@ -112,3 +112,19 @@ module "aurora" {
   max_capacity          = var.aurora_max_capacity
   backup_retention_days = var.backup_retention_days
 }
+
+# --- Monitoring & alerting --------------------------------------------------
+
+module "monitoring" {
+  source = "./modules/monitoring"
+
+  name_prefix    = local.name_prefix
+  log_group_name = module.ecs.log_group_name
+  alert_email    = var.alert_email
+
+  ecs_cluster_name = module.ecs.cluster_name
+  ecs_service_name = module.ecs.service_name
+
+  alb_arn_suffix          = module.alb.alb_arn_suffix
+  target_group_arn_suffix = module.alb.target_group_arn_suffix
+}

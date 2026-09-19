@@ -121,8 +121,13 @@ Build a secure, full-stack web app where a registered user can log restaurants t
 
 ---
 
-### Task 10: CloudWatch monitoring and operational readiness
+### Task 10: CloudWatch monitoring and operational readiness ✓
 - **Objective:** Ensure the app is observable and recovers from failures automatically
 - **Implementation:** Configure ECS health check on `GET /health` (30s interval, 3 retries); confirm CloudWatch log group receives container stdout/stderr; add CloudWatch log metric filter for `ERROR` log level; add Prisma database connection retry logic on startup (for Aurora cold-start); document operational runbook in `README.md`
 - **Tests:** Simulate a failed health check locally; verify logs appear in CloudWatch after ECS deployment
 - **Demo:** App is live on the ALB URL; CloudWatch shows live container logs; ECS console shows the service as stable with passing health checks
+- **Completed:** App side — `src/lib/logger.ts` (structured JSON logs with a `level` field; `ERROR` is what the metric filter matches), `connectWithRetry()` in `prisma.ts` (exponential backoff, capped 10s, up to 8 attempts) called from `index.ts` before the server listens, and the global error handler now logs structured `ERROR` entries. Infra side — new `monitoring` module: an `ERROR` log metric filter (`DeterminEat/AppErrorCount`), an SNS alerts topic with optional email subscription (`alert_email` variable), and four CloudWatch alarms (app errors, ECS CPU, ECS memory, unhealthy ALB hosts) all wired to the topic. The ECS `/health` check (30s/3 retries) and CloudWatch log group already existed from Tasks 7–8. Runbook expanded in `README.md` (log queries, alarm table, unhealthy-service diagnosis incl. the DB cold-start behavior). Also corrected the ECS service name in the runbook (`determineat`, not `determineat-service`). 3 retry tests added. **Verified:** `terraform validate` passes with the monitoring module; typecheck + lint clean; all 41 tests pass. Live CloudWatch behavior (metric filter firing, alarms transitioning, SNS delivery) requires a real deployment, not exercised here.
+
+---
+
+**Plan status:** All 10 tasks complete. The app is buildable, tested (41 tests), containerized, and the full AWS infrastructure + CI/CD is defined in Terraform and validated. Remaining work is a live deployment against a real AWS account (`bootstrap.py` → `terraform apply` → configure GitHub repo variables), which exercises the paths that can't be verified locally: `terraform plan/apply`, the OIDC pipeline run, Cognito sign-in against a real pool, and CloudWatch alarms/SNS delivery.

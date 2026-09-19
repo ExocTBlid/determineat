@@ -4,6 +4,7 @@ import { existsSync } from 'node:fs';
 import path from 'node:path';
 import meRouter from './routes/me.js';
 import restaurantsRouter from './routes/restaurants.js';
+import { logger } from './lib/logger.js';
 
 const app = express();
 
@@ -52,8 +53,13 @@ if (existsSync(publicDir)) {
 // Global error handler — catches any error passed to next(err)
 // Must be defined last with four parameters so Express recognises it.
 // ---------------------------------------------------------------------------
-app.use((err: Error, _req: Request, res: Response, _next: NextFunction) => {
-  console.error(err.stack ?? err.message);
+app.use((err: Error, req: Request, res: Response, _next: NextFunction) => {
+  logger.error('Unhandled request error', {
+    error: err.message,
+    stack: err.stack,
+    method: req.method,
+    path: req.path,
+  });
   res.status(500).json({ error: 'Internal server error' });
 });
 

@@ -311,6 +311,9 @@ Browser → ALB → ECS Fargate (Express + React) → Aurora Serverless v2
 
 ## Operations
 
+> The ECS cluster and service are both named `determineat` (the `project_name`).
+> Adjust the `--region` in the commands below to match your deployment.
+
 ### Viewing Logs
 
 Stream live container logs from the terminal:
@@ -321,12 +324,51 @@ aws logs tail /ecs/determineat --follow --region us-east-1
 
 Or open the [CloudWatch Logs console](https://console.aws.amazon.com/cloudwatch/home#logsV2:log-groups) and navigate to the `/ecs/determineat` log group.
 
+The app emits **structured JSON logs** (one object per line with a `level` field
+of `INFO`, `WARN`, or `ERROR`). Query them with CloudWatch Logs Insights, e.g.
+recent errors:
+
+```
+fields @timestamp, message, error
+| filter level = "ERROR"
+| sort @timestamp desc
+| limit 50
+```
+
+### Monitoring and Alerts
+
+Monitoring is provisioned by the `monitoring` Terraform module:
+
+- **Container Insights** is enabled on the ECS cluster (CPU, memory, task counts).
+- A **metric filter** counts `ERROR`-level log lines as the
+  `DeterminEat/AppErrorCount` metric.
+- An **SNS topic** (`determineat-alerts`) receives alarm notifications. Set the
+  `alert_email` Terraform variable to subscribe an address — AWS sends a
+  confirmation email you must accept before alerts arrive.
+- **CloudWatch alarms** publish to that topic:
+
+  | Alarm | Trigger |
+  |---|---|
+  | `determineat-app-errors` | ≥ 5 `ERROR` log events in 5 minutes |
+  | `determineat-ecs-cpu-high` | CPU > 85% for 10 minutes |
+  | `determineat-ecs-memory-high` | Memory > 85% for 10 minutes |
+  | `determineat-unhealthy-hosts` | ≥ 1 unhealthy ALB target for 3 minutes |
+
+View alarm state:
+
+```bash
+aws cloudwatch describe-alarms \
+  --alarm-name-prefix determineat- \
+  --region us-east-1 \
+  --query 'MetricAlarms[].{Name:AlarmName,State:StateValue}'
+```
+
 ### Forcing a Redeployment
 
 ```bash
 aws ecs update-service \
   --cluster determineat \
-  --service determineat-service \
+  --service determineat \
   --force-new-deployment \
   --region us-east-1
 ```
@@ -337,13 +379,38 @@ aws ecs update-service \
 # Check ECS service status
 aws ecs describe-services \
   --cluster determineat \
-  --services determineat-service \
+  --services determineat \
   --region us-east-1 \
-  --query 'services[0].{Status:status,Running:runningCount,Desired:desiredCount,Health:healthCheckGracePeriodSeconds}'
+  --query 'services[0].{Status:status,Running:runningCount,Desired:desiredCount}'
 
 # Hit the health endpoint directly (replace with your ALB DNS)
 curl https://your-alb-dns.us-east-1.elb.amazonaws.com/health
 ```
+
+### Diagnosing an Unhealthy Service
+
+If the `unhealthy-hosts` alarm fires or the service won't stabilize:
+
+1. **Check recent logs** for startup or request errors:
+   ```bash
+   aws logs tail /ecs/determineat --since 15m --region us-east-1
+   ```
+2. **Database cold-start is handled automatically.** Aurora Serverless v2 can be
+   paused or scaling when a task starts; the app retries the DB connection with
+   exponential backoff (up to 8 attempts) before giving up. Look for
+   `Database connection failed; retrying` (WARN) and
+   `Database connection established` (INFO) in the logs. Repeated
+   `giving up` errors mean the DB is genuinely unreachable — check the Aurora
+   cluster status and the DB security group.
+3. **Inspect stopped tasks** for the exit reason:
+   ```bash
+   aws ecs list-tasks --cluster determineat --desired-status STOPPED --region us-east-1
+   aws ecs describe-tasks --cluster determineat --tasks <task-arn> --region us-east-1 \
+     --query 'tasks[0].stoppedReason'
+   ```
+4. If a bad image was deployed, redeploy a known-good tag by updating
+   `container_image` in `terraform.tfvars` and running `terraform apply`, or
+   revert the offending commit and let the pipeline roll forward.
 
 ### Restoring from an Aurora Snapshot
 
@@ -357,7 +424,7 @@ Aurora Serverless v2 takes automated backups daily with a 7-day retention window
    ```bash
    aws ecs update-service \
      --cluster determineat \
-     --service determineat-service \
+     --service determineat \
      --force-new-deployment \
      --region us-east-1
    ```

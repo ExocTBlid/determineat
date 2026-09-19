@@ -16,6 +16,12 @@ variable "github_repository" {
   default     = ""
 }
 
+variable "alert_email" {
+  description = "Email address subscribed to the CloudWatch alerts SNS topic. If empty, the topic is created without a subscription."
+  type        = string
+  default     = ""
+}
+
 variable "project_name" {
   description = "Base name used to prefix resources"
   type        = string

@@ -9,6 +9,10 @@ project_name = "determineat"
 # creating the CI/CD role and OIDC provider.
 github_repository = "your-username/determineat"
 
+# Email subscribed to CloudWatch alerts (SNS). Leave empty to create the topic
+# without a subscription. You must confirm the subscription email AWS sends.
+alert_email = "you@example.com"
+
 # Container image pushed to ECR. CI overrides this with a SHA-tagged image.
 # Leave empty for the first apply; the ECS service will use a placeholder.
 container_image = ""

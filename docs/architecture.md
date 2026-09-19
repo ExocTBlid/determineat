@@ -31,7 +31,8 @@ graph TD
 | **ECR** | Docker image registry, stores tagged images per git SHA |
 | **Terraform** | Declares and manages all AWS infrastructure as code |
 | **GitHub Actions** | CI/CD pipeline — test, build, deploy on push to main |
-| **CloudWatch Logs** | Container log aggregation and error metric filtering |
+| **CloudWatch** | Container logs, Container Insights metrics, error metric filter, and alarms |
+| **SNS** | Delivers CloudWatch alarm notifications (email subscription) |
 | **S3** | Terraform remote state storage + native state locking (`use_lockfile`) |
 
 ## Technology Decisions
@@ -98,6 +99,7 @@ determineat/
 │   │   ├── aurora/         # Serverless v2 PostgreSQL + secret
 │   │   ├── alb/            # load balancer, target group, listeners
 │   │   ├── ecs/            # cluster, task def, service, IAM, logs
+│   │   ├── monitoring/     # error metric filter, SNS alerts, alarms
 │   │   └── github_oidc/    # data-source lookup of the CI/CD deploy role
 │   ├── main.tf             # module wiring
 │   ├── variables.tf
@@ -233,6 +235,24 @@ VPC: 10.0.0.0/16
   Public subnets:  10.0.1.0/24, 10.0.2.0/24  (ALB, NAT Gateway)
   Private subnets: 10.0.3.0/24, 10.0.4.0/24  (ECS tasks, Aurora)
 ```
+
+## Monitoring & Alerting
+
+Provisioned by the `monitoring` module (see the operational runbook in the
+README for day-to-day commands):
+
+- **Logs** — the app emits structured JSON (one line per event with a `level`
+  field). ECS ships stdout/stderr to the `/ecs/determineat` CloudWatch log group.
+- **Error metric** — a metric filter matches `level = "ERROR"` lines and counts
+  them as `DeterminEat/AppErrorCount`.
+- **Alerts** — an SNS topic (`determineat-alerts`) with an optional email
+  subscription receives alarm notifications.
+- **Alarms** — application errors (≥ 5 in 5 min), ECS CPU > 85%, ECS memory
+  > 85%, and unhealthy ALB targets (≥ 1 for 3 min).
+- **Self-healing** — the ALB/ECS `/health` check (30s interval, 3 failures =
+  unhealthy) makes Fargate replace bad tasks automatically. On startup the app
+  retries the Aurora connection with exponential backoff to ride out
+  Serverless v2 cold-starts rather than crash-looping.
 
 ## Security Considerations
 
