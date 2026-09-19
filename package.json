@@ -14,10 +14,15 @@
     "build": "npm run build --workspaces --if-present"
   },
   "devDependencies": {
+    "@commitlint/cli": "19.4.1",
+    "@commitlint/config-conventional": "19.4.1",
+    "@semantic-release/changelog": "6.0.3",
+    "@semantic-release/git": "10.0.1",
     "@typescript-eslint/eslint-plugin": "8.3.0",
     "@typescript-eslint/parser": "8.3.0",
     "eslint": "9.9.1",
     "prettier": "3.3.3",
+    "semantic-release": "24.1.0",
     "typescript": "5.5.4"
   },
   "engines": {

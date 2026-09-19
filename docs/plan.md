@@ -131,3 +131,11 @@ Build a secure, full-stack web app where a registered user can log restaurants t
 ---
 
 **Plan status:** All 10 tasks complete. The app is buildable, tested (41 tests), containerized, and the full AWS infrastructure + CI/CD is defined in Terraform and validated. Remaining work is a live deployment against a real AWS account (`bootstrap.py` → `terraform apply` → configure GitHub repo variables), which exercises the paths that can't be verified locally: `terraform plan/apply`, the OIDC pipeline run, Cognito sign-in against a real pool, and CloudWatch alarms/SNS delivery.
+
+---
+
+### Post-plan addition: Automated versioning ✓
+- **Objective:** Set a semantic version on every successful build to `main`, driven by commit prefixes.
+- **Implementation:** Added `semantic-release` (Conventional Commits) as a `release` CI job that runs after `test` on push to `main` — it computes the next semver from commit history, tags the repo, writes `CHANGELOG.md`, bumps `package.json` (no npm publish), and creates a GitHub Release. The `build` job now tags the Docker image with that version (falling back to the git SHA when no release is published), so deployed images trace back to a release. `commitlint` runs on PRs to enforce the `fix:`/`feat:`/`BREAKING CHANGE` convention. Config in `.releaserc.json` and `commitlint.config.cjs`.
+- **Verified:** `semantic-release --dry-run` loads all plugins and passes verification up to the GitHub-token step (expected locally); `commitlint` accepts/rejects sample messages correctly; workflow YAML + `.releaserc.json` parse. A real release (tag/changelog/GitHub Release + versioned image) requires a live pipeline run with `GITHUB_TOKEN`, not exercised here.
+- **Note:** Uses the built-in `GITHUB_TOKEN` (needs `contents: write`), so no extra secret. The release commit carries `[skip ci]` to avoid retriggering the pipeline.

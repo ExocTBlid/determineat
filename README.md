@@ -249,13 +249,19 @@ job assumes an IAM role instead of storing long-lived AWS keys in GitHub.
 
 **Pipeline stages:**
 
-1. **test** — `npm ci`, start the test database, apply migrations, then
+1. **commitlint** (PRs only) — validates that commit messages follow
+   Conventional Commits, so the release step can derive the version.
+2. **test** — `npm ci`, start the test database, apply migrations, then
    typecheck + lint + test (Jest + Vitest). Runs on push and PR; a failure here
-   blocks build and deploy.
-2. **build** — Assumes the deploy role via OIDC, logs in to ECR, builds the
-   multi-stage image (baking the `VITE_*` Cognito values in at build time),
-   and pushes it tagged with the git SHA and `latest`.
-3. **deploy** — Assumes the deploy role, installs the pinned Terraform version,
+   blocks release, build, and deploy.
+3. **release** — `semantic-release` computes the next version from the commit
+   history, tags the repo, updates `CHANGELOG.md` + `package.json`, and creates
+   a GitHub Release. Outputs the version for the build step.
+4. **build** — Assumes the deploy role via OIDC, logs in to ECR, builds the
+   multi-stage image (baking the `VITE_*` Cognito values in at build time), and
+   pushes it tagged with the **semantic version** (falling back to the git SHA
+   if no release was published) and `latest`.
+5. **deploy** — Assumes the deploy role, installs the pinned Terraform version,
    runs `terraform apply` with the new image URI, then forces a new ECS
    deployment and waits for the service to stabilize.
 
@@ -290,6 +296,35 @@ With OIDC none of these are secrets — they are non-sensitive identifiers:
 > deploy role), then the first `terraform apply` locally (creates the app
 > infrastructure), then set the repository variables from the outputs. After
 > that, pushes to `main` deploy automatically via the pipeline.
+
+---
+
+## Versioning
+
+Releases are automated with [semantic-release](https://semantic-release.gitbook.io/)
+driven by [Conventional Commits](https://www.conventionalcommits.org/). On every
+push to `main` that passes tests, the `release` job derives the next
+[semantic version](https://semver.org/) from the commit messages since the last
+release, tags the repo, writes `CHANGELOG.md`, and publishes a GitHub Release.
+That version becomes the Docker image tag, so every deployed image traces back
+to a release.
+
+**Commit message prefixes** determine the bump:
+
+| Prefix | Example | Version bump |
+|---|---|---|
+| `fix:` | `fix: correct rating validation` | patch (`0.0.x`) |
+| `feat:` | `feat: add cuisine filter` | minor (`0.x.0`) |
+| `feat!:` or a `BREAKING CHANGE:` footer | `feat!: drop v1 API` | major (`x.0.0`) |
+| `chore:`, `docs:`, `test:`, `refactor:`, `ci:`, `build:`, `perf:`, `style:` | `docs: update runbook` | no release |
+
+`commitlint` runs on pull requests and fails the check if a commit doesn't
+follow the convention, so malformed messages are caught before merge. The config
+lives in `commitlint.config.cjs`; the release config in `.releaserc.json`.
+
+> The release commit is made with `[skip ci]` so it doesn't retrigger the
+> pipeline. semantic-release authenticates to GitHub with the built-in
+> `GITHUB_TOKEN` (no extra secret needed).
 
 ---
 

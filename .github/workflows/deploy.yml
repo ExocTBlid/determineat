@@ -7,16 +7,44 @@ on:
   pull_request:
     branches: [main]
 
-# Least-privilege token permissions. id-token: write is required for AWS OIDC.
+# Token permissions. id-token: write for AWS OIDC; contents: write lets
+# semantic-release push tags, the changelog, and the version bump.
 permissions:
-  contents: read
+  contents: write
   id-token: write
+  issues: write
+  pull-requests: write
 
 env:
   NODE_VERSION: '20'
   TERRAFORM_VERSION: '1.9.8'
 
 jobs:
+  # ---------------------------------------------------------------------------
+  # 0. Commit lint — enforce Conventional Commits on PRs so semantic-release can
+  #    derive the version. Runs only on pull requests.
+  # ---------------------------------------------------------------------------
+  commitlint:
+    name: Lint commit messages
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Validate PR commits
+        run: npx commitlint --from "${{ github.event.pull_request.base.sha }}" --to "${{ github.event.pull_request.head.sha }}" --verbose
+
   # ---------------------------------------------------------------------------
   # 1. Test — runs on every push and PR. Build/deploy depend on this passing.
   # ---------------------------------------------------------------------------
@@ -56,18 +84,65 @@ jobs:
           DATABASE_URL: postgresql://postgres:postgres@localhost:5433/determineat_test
 
   # ---------------------------------------------------------------------------
-  # 2. Build — build the Docker image and push to ECR, tagged with the git SHA.
-  #    Only runs on push to main, after tests pass.
+  # 2. Release — semantic-release computes the next version from commit prefixes
+  #    (fix:/feat:/BREAKING CHANGE), tags the repo, updates CHANGELOG.md +
+  #    package.json, and creates a GitHub Release. Only on push to main.
+  #    Outputs whether a release was published and the version, for the build.
+  # ---------------------------------------------------------------------------
+  release:
+    name: Semantic release
+    needs: test
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+    runs-on: ubuntu-latest
+    outputs:
+      published: ${{ steps.semrel.outputs.new_release_published }}
+      version: ${{ steps.semrel.outputs.new_release_version }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0 # semantic-release needs full history + tags
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run semantic-release
+        id: semrel
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          npx semantic-release
+          # Expose the resolved version (from package.json after the bump) so the
+          # build job can tag the image. Empty if no release was published.
+          VERSION="$(node -p "require('./package.json').version")"
+          if git describe --tags --exact-match >/dev/null 2>&1; then
+            echo "new_release_published=true" >> "$GITHUB_OUTPUT"
+            echo "new_release_version=$VERSION" >> "$GITHUB_OUTPUT"
+          else
+            echo "new_release_published=false" >> "$GITHUB_OUTPUT"
+          fi
+
+  # ---------------------------------------------------------------------------
+  # 3. Build — build the Docker image and push to ECR, tagged with the semantic
+  #    version (falls back to the git SHA when no release was published).
+  #    Only runs on push to main, after test + release.
   # ---------------------------------------------------------------------------
   build:
     name: Build and push image
-    needs: test
+    needs: [test, release]
     if: github.ref == 'refs/heads/main' && github.event_name == 'push'
     runs-on: ubuntu-latest
     outputs:
       image_uri: ${{ steps.build.outputs.image_uri }}
     steps:
       - uses: actions/checkout@v4
+        with:
+          ref: main # pick up the release commit (version bump / changelog)
 
       - name: Configure AWS credentials (OIDC)
         uses: aws-actions/configure-aws-credentials@v4
@@ -84,8 +159,14 @@ jobs:
         env:
           REGISTRY: ${{ steps.ecr.outputs.registry }}
           REPOSITORY: ${{ vars.ECR_REPOSITORY }}
+          RELEASE_VERSION: ${{ needs.release.outputs.version }}
         run: |
-          IMAGE_TAG="${GITHUB_SHA::12}"
+          # Use the semantic version when a release was published, else the SHA.
+          if [ -n "$RELEASE_VERSION" ]; then
+            IMAGE_TAG="$RELEASE_VERSION"
+          else
+            IMAGE_TAG="${GITHUB_SHA::12}"
+          fi
           IMAGE="$REGISTRY/$REPOSITORY"
           docker build \
             --build-arg VITE_COGNITO_USER_POOL_ID="${{ vars.COGNITO_USER_POOL_ID }}" \
@@ -99,7 +180,7 @@ jobs:
           echo "image_uri=$IMAGE:$IMAGE_TAG" >> "$GITHUB_OUTPUT"
 
   # ---------------------------------------------------------------------------
-  # 3. Deploy — apply Terraform with the new image tag, then force a new ECS
+  # 4. Deploy — apply Terraform with the new image tag, then force a new ECS
   #    deployment. Database migrations run inside the container on startup
   #    (see Dockerfile CMD), so no DB access is needed from the runner.
   # ---------------------------------------------------------------------------
