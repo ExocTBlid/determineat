@@ -318,9 +318,27 @@ to a release.
 | `feat!:` or a `BREAKING CHANGE:` footer | `feat!: drop v1 API` | major (`x.0.0`) |
 | `chore:`, `docs:`, `test:`, `refactor:`, `ci:`, `build:`, `perf:`, `style:` | `docs: update runbook` | no release |
 
-`commitlint` runs on pull requests and fails the check if a commit doesn't
-follow the convention, so malformed messages are caught before merge. The config
-lives in `commitlint.config.cjs`; the release config in `.releaserc.json`.
+`commitlint` enforces the convention at two points:
+
+- **Locally, at commit time** — a Husky `commit-msg` hook (`.husky/commit-msg`)
+  runs commitlint on your message and rejects the commit immediately if it's
+  malformed. The hook is installed automatically by the `prepare` script on
+  `npm install`, so no manual setup is needed. You'll see the error right in
+  your terminal:
+  ```
+  $ git commit -m "add filter"
+  ✖  subject may not be empty [subject-empty]
+  ✖  type may not be empty [type-empty]
+  # commit aborted
+  ```
+  (Local hooks can be bypassed with `git commit --no-verify`, which is why the
+  CI check below is the authoritative gate.)
+- **In CI, on pull requests** — the `commitlint` job re-validates every commit
+  and fails the check if any don't follow the convention, so malformed messages
+  can't be merged even if the local hook was skipped.
+
+The config lives in `commitlint.config.cjs`; the release config in
+`.releaserc.json`.
 
 > The release commit is made with `[skip ci]` so it doesn't retrigger the
 > pipeline. semantic-release authenticates to GitHub with the built-in

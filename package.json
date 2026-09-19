@@ -7,11 +7,12 @@
     "backend"
   ],
   "scripts": {
-    "dev": "docker-compose up",
+    "dev": "docker compose up",
     "test": "npm run test --workspaces --if-present",
     "lint": "npm run lint --workspaces --if-present",
     "typecheck": "npm run typecheck --workspaces --if-present",
-    "build": "npm run build --workspaces --if-present"
+    "build": "npm run build --workspaces --if-present",
+    "prepare": "husky"
   },
   "devDependencies": {
     "@commitlint/cli": "19.4.1",
@@ -21,6 +22,7 @@
     "@typescript-eslint/eslint-plugin": "8.3.0",
     "@typescript-eslint/parser": "8.3.0",
     "eslint": "9.9.1",
+    "husky": "9.1.5",
     "prettier": "3.3.3",
     "semantic-release": "24.1.0",
     "typescript": "5.5.4"

@@ -139,3 +139,10 @@ Build a secure, full-stack web app where a registered user can log restaurants t
 - **Implementation:** Added `semantic-release` (Conventional Commits) as a `release` CI job that runs after `test` on push to `main` — it computes the next semver from commit history, tags the repo, writes `CHANGELOG.md`, bumps `package.json` (no npm publish), and creates a GitHub Release. The `build` job now tags the Docker image with that version (falling back to the git SHA when no release is published), so deployed images trace back to a release. `commitlint` runs on PRs to enforce the `fix:`/`feat:`/`BREAKING CHANGE` convention. Config in `.releaserc.json` and `commitlint.config.cjs`.
 - **Verified:** `semantic-release --dry-run` loads all plugins and passes verification up to the GitHub-token step (expected locally); `commitlint` accepts/rejects sample messages correctly; workflow YAML + `.releaserc.json` parse. A real release (tag/changelog/GitHub Release + versioned image) requires a live pipeline run with `GITHUB_TOKEN`, not exercised here.
 - **Note:** Uses the built-in `GITHUB_TOKEN` (needs `contents: write`), so no extra secret. The release commit carries `[skip ci]` to avoid retriggering the pipeline.
+
+---
+
+### Post-plan addition: Local commit-message hook ✓
+- **Objective:** Give developers immediate feedback at commit time when a message doesn't follow Conventional Commits (previously only caught in CI on PRs).
+- **Implementation:** Added Husky (`prepare: husky` script installs hooks on `npm install`) and a `.husky/commit-msg` hook that runs `commitlint --edit`. Malformed messages abort the commit locally; the CI `commitlint` job remains the authoritative, non-bypassable gate.
+- **Verified:** invoking the hook script directly (as git does, with the message-file path) — a non-conventional message exits 1 with the specific errors, a valid `feat:`/`fix:` message exits 0. Husky's `.husky/_/` internals are gitignored by Husky itself; `.husky/commit-msg` is committed so it reaches all contributors.

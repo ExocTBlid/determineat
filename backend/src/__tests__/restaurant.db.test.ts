@@ -6,7 +6,7 @@
  * schema and migrations are correct by exercising actual DB operations.
  *
  * Prerequisites:
- *   docker-compose up -d postgres_test
+ *   docker compose up -d postgres_test
  *   DATABASE_URL=postgresql://postgres:postgres@localhost:5433/determineat_test \
  *     npx prisma migrate deploy
  *
