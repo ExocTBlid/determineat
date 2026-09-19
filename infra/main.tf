@@ -38,6 +38,17 @@ module "ecr" {
   name_prefix = local.name_prefix
 }
 
+# --- CI/CD OIDC (references the role created by infra/bootstrap.py) ----------
+# Only looked up when a GitHub repo is configured; the OIDC provider and deploy
+# role themselves are managed by bootstrap.py, not Terraform.
+
+module "github_oidc" {
+  source = "./modules/github_oidc"
+  count  = var.github_repository != "" ? 1 : 0
+
+  name_prefix = local.name_prefix
+}
+
 # --- Authentication ---------------------------------------------------------
 
 module "cognito" {

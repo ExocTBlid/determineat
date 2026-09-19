@@ -183,30 +183,35 @@ npm run typecheck
 
 ### First-Time Infrastructure Setup
 
-1. **Create Terraform remote state resources** (one-time manual step)
+1. **Bootstrap the prerequisites** (one-time, run locally with admin credentials)
+
+   Terraform can't create the S3 bucket that stores its own state, nor the IAM
+   role the OIDC pipeline assumes to run Terraform. `infra/bootstrap.py` creates
+   both. It is idempotent — safe to re-run any time.
 
    ```bash
-   aws s3 mb s3://determineat-terraform-state --region us-east-1
-   aws s3api put-bucket-versioning \
-     --bucket determineat-terraform-state \
-     --versioning-configuration Status=Enabled
-
-   aws dynamodb create-table \
-     --table-name determineat-terraform-lock \
-     --attribute-definitions AttributeName=LockID,AttributeType=S \
-     --key-schema AttributeName=LockID,KeyType=HASH \
-     --billing-mode PAY_PER_REQUEST \
-     --region us-east-1
+   pip install boto3
+   cd infra
+   python3 bootstrap.py --github-repo your-username/determineat
    ```
+
+   This creates:
+   - the Terraform state S3 bucket (versioned, encrypted, public access blocked;
+     state locking is native to S3 — no DynamoDB table needed)
+   - the GitHub Actions OIDC provider
+   - the `determineat-github-deploy` IAM role the pipeline assumes
+
+   The script prints the `backend.hcl` values and the GitHub repository
+   variables to set (including the deploy role ARN).
 
 2. **Configure Terraform variables and backend**
    ```bash
    cd infra
    cp terraform.tfvars.example terraform.tfvars
-   # Edit terraform.tfvars: AWS region, ACM cert ARN, app domain URL, etc.
+   # Edit terraform.tfvars: github_repository, ACM cert ARN, app domain URL, etc.
 
    cp backend.hcl.example backend.hcl
-   # Edit backend.hcl to reference the S3 bucket + DynamoDB table from step 1
+   # Set bucket + region to match what bootstrap.py created
    ```
 
 3. **Apply infrastructure**
@@ -219,7 +224,8 @@ npm run typecheck
    This provisions: VPC (2 AZs, public/private subnets, NAT), ECS Fargate
    cluster + service, Aurora Serverless v2, Cognito user pool + app client,
    ALB, ECR, CloudWatch log group, and all supporting IAM roles and security
-   groups.
+   groups. (The OIDC provider and deploy role are owned by `bootstrap.py`;
+   Terraform only references the role.)
 
 4. **Wire the outputs into your environment**
 
@@ -229,6 +235,7 @@ npm run typecheck
    # cognito_user_pool_id, cognito_client_id  -> frontend build + backend env
    # ecr_repository_url                       -> CI image push target
    # alb_dns_name                             -> the public app URL
+   # github_actions_role_arn                  -> AWS_ROLE_ARN repo variable
    ```
    The database connection string is managed automatically — Terraform stores
    it in AWS Secrets Manager and the ECS task reads it at startup, so you never
@@ -236,21 +243,53 @@ npm run typecheck
 
 ### GitHub Actions (Automated Deployments)
 
-Every push to `main` automatically runs the full pipeline. Add the following secrets to your GitHub repository (`Settings → Secrets and variables → Actions`):
-
-| Secret | Description |
-|---|---|
-| `AWS_ACCESS_KEY_ID` | IAM user access key with ECS, ECR, RDS, and Cognito permissions |
-| `AWS_SECRET_ACCESS_KEY` | IAM user secret key |
-| `AWS_REGION` | AWS region (e.g., `us-east-1`) |
-| `TF_STATE_BUCKET` | S3 bucket name for Terraform state |
-| `TF_LOCK_TABLE` | DynamoDB table name for Terraform state locking |
+The pipeline (`.github/workflows/deploy.yml`) runs on every push to `main` (the
+test job also runs on PRs). It authenticates to AWS with **GitHub OIDC** — the
+job assumes an IAM role instead of storing long-lived AWS keys in GitHub.
 
 **Pipeline stages:**
 
-1. **test** — Runs backend Jest tests and frontend Vitest tests; fails fast on any error
-2. **build** — Builds the Docker image (multi-stage), tags with git SHA, pushes to ECR
-3. **deploy** — Runs `terraform apply` with the new image tag, forces a new ECS deployment
+1. **test** — `npm ci`, start the test database, apply migrations, then
+   typecheck + lint + test (Jest + Vitest). Runs on push and PR; a failure here
+   blocks build and deploy.
+2. **build** — Assumes the deploy role via OIDC, logs in to ECR, builds the
+   multi-stage image (baking the `VITE_*` Cognito values in at build time),
+   and pushes it tagged with the git SHA and `latest`.
+3. **deploy** — Assumes the deploy role, installs the pinned Terraform version,
+   runs `terraform apply` with the new image URI, then forces a new ECS
+   deployment and waits for the service to stabilize.
+
+**Runner tooling:** GitHub-hosted runners already provide Node, Docker, and the
+AWS CLI, but **not Terraform** — the deploy job installs it with
+`hashicorp/setup-terraform@v3` (pinned to a specific version that satisfies the
+`>= 1.10` constraint in `infra/versions.tf`). Node is pinned with
+`actions/setup-node@v4`.
+
+**One-time OIDC setup:** the OIDC provider and the deploy role are created by
+`infra/bootstrap.py` (see "First-Time Infrastructure Setup" above), not by the
+pipeline. Set the role ARN it prints (also available as
+`terraform output github_actions_role_arn`) as the `AWS_ROLE_ARN` repository
+variable below.
+
+**Repository variables** (`Settings → Secrets and variables → Actions → Variables`).
+With OIDC none of these are secrets — they are non-sensitive identifiers:
+
+| Variable | Description |
+|---|---|
+| `AWS_ROLE_ARN` | Deploy role ARN (`terraform output github_actions_role_arn`) |
+| `AWS_REGION` | AWS region (e.g., `us-east-1`) |
+| `ECR_REPOSITORY` | ECR repository name (the `project_name`, e.g. `determineat`) |
+| `ECS_CLUSTER` | ECS cluster name (`terraform output ecs_cluster_name`) |
+| `ECS_SERVICE` | ECS service name (`terraform output ecs_service_name`) |
+| `COGNITO_USER_POOL_ID` | Baked into the frontend build (`terraform output cognito_user_pool_id`) |
+| `COGNITO_CLIENT_ID` | Baked into the frontend build (`terraform output cognito_client_id`) |
+| `ACM_CERTIFICATE_ARN` | (Optional) ACM cert ARN for the ALB HTTPS listener |
+| `APP_DOMAIN_URL` | (Optional) Public app URL for Cognito callback/sign-out |
+
+> **Order of operations:** run `bootstrap.py` first (creates the state bucket +
+> deploy role), then the first `terraform apply` locally (creates the app
+> infrastructure), then set the repository variables from the outputs. After
+> that, pushes to `main` deploy automatically via the pipeline.
 
 ---
 

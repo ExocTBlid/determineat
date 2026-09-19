@@ -41,3 +41,8 @@ output "aurora_endpoint" {
   description = "Aurora cluster writer endpoint"
   value       = module.aurora.cluster_endpoint
 }
+
+output "github_actions_role_arn" {
+  description = "IAM role ARN for GitHub Actions to assume via OIDC (set as the AWS_ROLE_ARN repo variable). Null when github_repository is unset."
+  value       = var.github_repository != "" ? module.github_oidc[0].deploy_role_arn : null
+}

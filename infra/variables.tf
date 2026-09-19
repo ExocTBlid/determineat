@@ -10,6 +10,12 @@ variable "environment" {
   default     = "prod"
 }
 
+variable "github_repository" {
+  description = "GitHub repository (owner/repo) allowed to assume the CI/CD deploy role via OIDC"
+  type        = string
+  default     = ""
+}
+
 variable "project_name" {
   description = "Base name used to prefix resources"
   type        = string

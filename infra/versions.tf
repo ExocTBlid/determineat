@@ -1,5 +1,7 @@
 terraform {
-  required_version = ">= 1.5"
+  # 1.10+ is required for native S3 state locking (use_lockfile), which
+  # replaces the previous DynamoDB lock table.
+  required_version = ">= 1.10"
 
   required_providers {
     aws = {
@@ -12,12 +14,14 @@ terraform {
     }
   }
 
-  # Remote state — the S3 bucket and DynamoDB lock table must be created once
-  # (see README "First-Time Infrastructure Setup"). Values are supplied at
+  # Remote state — the S3 bucket is created once by infra/bootstrap.py.
+  # `use_lockfile` enables native S3 state locking (a .tflock object in the
+  # bucket), so no DynamoDB table is needed. The bucket/region are supplied at
   # `terraform init` time via -backend-config, so they aren't hardcoded here.
   backend "s3" {
-    key     = "determineat/terraform.tfstate"
-    encrypt = true
+    key          = "determineat/terraform.tfstate"
+    encrypt      = true
+    use_lockfile = true
   }
 }
 

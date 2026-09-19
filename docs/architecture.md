@@ -12,7 +12,7 @@ graph TD
 
     subgraph CI/CD
         GH["GitHub Actions\n(push to main)"] -->|build & push| ECR["Amazon ECR"]
-        GH -->|terraform apply| TF["Terraform State\n(S3 + DynamoDB lock)"]
+        GH -->|terraform apply| TF["Terraform State\n(S3, native locking)"]
         ECR --> ECS
     end
 ```
@@ -32,7 +32,7 @@ graph TD
 | **Terraform** | Declares and manages all AWS infrastructure as code |
 | **GitHub Actions** | CI/CD pipeline — test, build, deploy on push to main |
 | **CloudWatch Logs** | Container log aggregation and error metric filtering |
-| **S3 + DynamoDB** | Terraform remote state storage and locking |
+| **S3** | Terraform remote state storage + native state locking (`use_lockfile`) |
 
 ## Technology Decisions
 
@@ -97,17 +97,19 @@ determineat/
 │   │   ├── cognito/        # user pool + public app client
 │   │   ├── aurora/         # Serverless v2 PostgreSQL + secret
 │   │   ├── alb/            # load balancer, target group, listeners
-│   │   └── ecs/            # cluster, task def, service, IAM, logs
+│   │   ├── ecs/            # cluster, task def, service, IAM, logs
+│   │   └── github_oidc/    # data-source lookup of the CI/CD deploy role
 │   ├── main.tf             # module wiring
 │   ├── variables.tf
 │   ├── outputs.tf
 │   ├── security_groups.tf  # tasks SG (root-level, breaks module cycle)
-│   ├── versions.tf         # providers + S3 backend
+│   ├── versions.tf         # providers + S3 backend (native locking)
+│   ├── bootstrap.py        # one-time: state bucket + OIDC provider + role
 │   ├── terraform.tfvars.example
 │   └── backend.hcl.example
 ├── .github/
 │   └── workflows/
-│       └── deploy.yml      # Added in Task 9
+│       └── deploy.yml      # CI/CD: test → build → deploy (OIDC auth)
 ├── docs/
 │   ├── plan.md
 │   ├── architecture.md
@@ -173,27 +175,44 @@ Error responses:
 
 ## CI/CD Pipeline Flow
 
+Defined in `.github/workflows/deploy.yml`. Runs on push to `main` (and the
+`test` job also on PRs). Authenticates to AWS via GitHub OIDC — no long-lived
+AWS keys are stored in GitHub. Runner tooling is pinned: Node via
+`setup-node@v4`, Terraform via `hashicorp/setup-terraform@v3` (GitHub runners
+do not ship Terraform).
+
 ```
-push to main
+push to main (test also runs on PRs)
      │
      ▼
 ┌─────────────┐
-│   test job  │  backend Jest + frontend Vitest
-│             │  fails fast on any error
+│   test job  │  npm ci; start postgres_test; apply migrations
+│             │  typecheck + lint + test (Jest + Vitest)
+└──────┬──────┘
+       │ success (main only)
+       ▼
+┌─────────────┐
+│  build job  │  OIDC → ECR login
+│             │  docker build (VITE_* Cognito vars as build args)
+│             │  push → ECR, tagged with git SHA + latest
 └──────┬──────┘
        │ success
        ▼
 ┌─────────────┐
-│  build job  │  docker build (multi-stage)
-│             │  docker push → ECR (tagged with git SHA)
-└──────┬──────┘
-       │ success
-       ▼
-┌─────────────┐
-│ deploy job  │  terraform init + apply (injects new image tag)
-│             │  force new ECS deployment
+│ deploy job  │  OIDC; setup-terraform (pinned)
+│             │  terraform init -backend-config; apply w/ new image URI
+│             │  ecs update-service --force-new-deployment; wait stable
 └─────────────┘
 ```
+
+Auth: `infra/bootstrap.py` creates the OIDC provider and a deploy IAM role whose
+trust policy is scoped to `repo:<owner>/<repo>:ref:refs/heads/main` (Terraform
+only references the role via a data source, since it must exist before the
+OIDC-authenticated pipeline can run Terraform). Terraform state locking is
+native to S3 (`use_lockfile`), so no DynamoDB table is used.
+Database migrations are **not** a pipeline step — the container runs
+`prisma migrate deploy` on startup, and the runner cannot reach the
+private-subnet Aurora instance anyway.
 
 ## Networking
 

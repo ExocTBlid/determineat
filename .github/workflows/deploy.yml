@@ -1,0 +1,152 @@
+name: CI/CD
+
+# Test on every push/PR; build + deploy only on push to main.
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+# Least-privilege token permissions. id-token: write is required for AWS OIDC.
+permissions:
+  contents: read
+  id-token: write
+
+env:
+  NODE_VERSION: '20'
+  TERRAFORM_VERSION: '1.9.8'
+
+jobs:
+  # ---------------------------------------------------------------------------
+  # 1. Test — runs on every push and PR. Build/deploy depend on this passing.
+  # ---------------------------------------------------------------------------
+  test:
+    name: Lint, typecheck, and test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Start test database
+        run: docker compose up -d postgres_test
+
+      - name: Apply migrations to test database
+        run: npm run db:migrate:deploy --workspace @determineat/backend
+        env:
+          DATABASE_URL: postgresql://postgres:postgres@localhost:5433/determineat_test
+
+      - name: Type-check
+        run: npm run typecheck
+
+      - name: Lint
+        run: npm run lint
+
+      - name: Run tests
+        run: npm test
+        env:
+          TEST_DATABASE_URL: postgresql://postgres:postgres@localhost:5433/determineat_test
+          DATABASE_URL: postgresql://postgres:postgres@localhost:5433/determineat_test
+
+  # ---------------------------------------------------------------------------
+  # 2. Build — build the Docker image and push to ECR, tagged with the git SHA.
+  #    Only runs on push to main, after tests pass.
+  # ---------------------------------------------------------------------------
+  build:
+    name: Build and push image
+    needs: test
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+    runs-on: ubuntu-latest
+    outputs:
+      image_uri: ${{ steps.build.outputs.image_uri }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Configure AWS credentials (OIDC)
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ vars.AWS_ROLE_ARN }}
+          aws-region: ${{ vars.AWS_REGION }}
+
+      - name: Log in to Amazon ECR
+        id: ecr
+        uses: aws-actions/amazon-ecr-login@v2
+
+      - name: Build and push image
+        id: build
+        env:
+          REGISTRY: ${{ steps.ecr.outputs.registry }}
+          REPOSITORY: ${{ vars.ECR_REPOSITORY }}
+        run: |
+          IMAGE_TAG="${GITHUB_SHA::12}"
+          IMAGE="$REGISTRY/$REPOSITORY"
+          docker build \
+            --build-arg VITE_COGNITO_USER_POOL_ID="${{ vars.COGNITO_USER_POOL_ID }}" \
+            --build-arg VITE_COGNITO_CLIENT_ID="${{ vars.COGNITO_CLIENT_ID }}" \
+            --build-arg VITE_AWS_REGION="${{ vars.AWS_REGION }}" \
+            -t "$IMAGE:$IMAGE_TAG" \
+            -t "$IMAGE:latest" \
+            .
+          docker push "$IMAGE:$IMAGE_TAG"
+          docker push "$IMAGE:latest"
+          echo "image_uri=$IMAGE:$IMAGE_TAG" >> "$GITHUB_OUTPUT"
+
+  # ---------------------------------------------------------------------------
+  # 3. Deploy — apply Terraform with the new image tag, then force a new ECS
+  #    deployment. Database migrations run inside the container on startup
+  #    (see Dockerfile CMD), so no DB access is needed from the runner.
+  # ---------------------------------------------------------------------------
+  deploy:
+    name: Deploy to AWS
+    needs: build
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Configure AWS credentials (OIDC)
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ vars.AWS_ROLE_ARN }}
+          aws-region: ${{ vars.AWS_REGION }}
+
+      - name: Set up Terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: ${{ env.TERRAFORM_VERSION }}
+
+      - name: Terraform init
+        working-directory: infra
+        run: terraform init -backend-config=backend.hcl
+
+      - name: Terraform apply
+        working-directory: infra
+        env:
+          TF_VAR_aws_region: ${{ vars.AWS_REGION }}
+          TF_VAR_github_repository: ${{ github.repository }}
+          TF_VAR_container_image: ${{ needs.build.outputs.image_uri }}
+          TF_VAR_acm_certificate_arn: ${{ vars.ACM_CERTIFICATE_ARN }}
+          TF_VAR_app_domain_url: ${{ vars.APP_DOMAIN_URL }}
+        run: terraform apply -auto-approve
+
+      - name: Force new ECS deployment
+        run: |
+          aws ecs update-service \
+            --cluster "${{ vars.ECS_CLUSTER }}" \
+            --service "${{ vars.ECS_SERVICE }}" \
+            --force-new-deployment \
+            --region "${{ vars.AWS_REGION }}"
+
+      - name: Wait for service to stabilize
+        run: |
+          aws ecs wait services-stable \
+            --cluster "${{ vars.ECS_CLUSTER }}" \
+            --services "${{ vars.ECS_SERVICE }}" \
+            --region "${{ vars.AWS_REGION }}"

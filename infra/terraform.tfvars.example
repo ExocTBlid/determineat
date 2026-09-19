@@ -5,6 +5,10 @@ aws_region   = "us-east-1"
 environment  = "prod"
 project_name = "determineat"
 
+# GitHub repo (owner/repo) allowed to deploy via OIDC. Leave empty to skip
+# creating the CI/CD role and OIDC provider.
+github_repository = "your-username/determineat"
+
 # Container image pushed to ECR. CI overrides this with a SHA-tagged image.
 # Leave empty for the first apply; the ECS service will use a placeholder.
 container_image = ""

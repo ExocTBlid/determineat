@@ -15,6 +15,17 @@
 FROM node:20-alpine AS frontend-build
 WORKDIR /app/frontend
 
+# Vite inlines VITE_* env vars at build time, so the Cognito config must be
+# present here (not at runtime). CI passes these as --build-arg values.
+ARG VITE_COGNITO_USER_POOL_ID=""
+ARG VITE_COGNITO_CLIENT_ID=""
+ARG VITE_AWS_REGION="us-east-1"
+ARG VITE_API_URL=""
+ENV VITE_COGNITO_USER_POOL_ID=$VITE_COGNITO_USER_POOL_ID
+ENV VITE_COGNITO_CLIENT_ID=$VITE_COGNITO_CLIENT_ID
+ENV VITE_AWS_REGION=$VITE_AWS_REGION
+ENV VITE_API_URL=$VITE_API_URL
+
 COPY frontend/package.json ./
 RUN npm install
 

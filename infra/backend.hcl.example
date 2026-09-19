@@ -1,6 +1,6 @@
 # Copy to backend.hcl and pass to: terraform init -backend-config=backend.hcl
-# These reference the S3 bucket + DynamoDB table you create once (see README).
+# The S3 bucket is created by infra/bootstrap.py. State locking is native to S3
+# (use_lockfile in versions.tf) — no DynamoDB table required.
 
-bucket         = "determineat-terraform-state"
-region         = "us-east-1"
-dynamodb_table = "determineat-terraform-lock"
+bucket = "determineat-terraform-state"
+region = "us-east-1"

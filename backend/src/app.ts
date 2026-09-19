@@ -52,7 +52,6 @@ if (existsSync(publicDir)) {
 // Global error handler — catches any error passed to next(err)
 // Must be defined last with four parameters so Express recognises it.
 // ---------------------------------------------------------------------------
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
 app.use((err: Error, _req: Request, res: Response, _next: NextFunction) => {
   console.error(err.stack ?? err.message);
   res.status(500).json({ error: 'Internal server error' });
