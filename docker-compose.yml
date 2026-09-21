@@ -1,6 +1,6 @@
 services:
   postgres:
-    image: postgres:16-alpine
+    image: postgres:17-alpine
     restart: unless-stopped
     environment:
       POSTGRES_USER: postgres
@@ -18,7 +18,7 @@ services:
 
   # Separate database used exclusively by Jest tests — wiped between runs
   postgres_test:
-    image: postgres:16-alpine
+    image: postgres:17-alpine
     restart: unless-stopped
     environment:
       POSTGRES_USER: postgres

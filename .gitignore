@@ -19,7 +19,7 @@ infra/*.tfstate
 infra/*.tfstate.backup
 infra/*.tfstate.*.backup
 infra/terraform.tfvars
-infra/backend.hcl
+# infra/backend.hcl
 
 # Editor / OS
 .DS_Store
@@ -39,3 +39,4 @@ backend/src/generated/
 # Python (bootstrap.py bytecode cache)
 __pycache__/
 *.py[cod]
+.venv

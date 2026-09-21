@@ -146,3 +146,11 @@ Build a secure, full-stack web app where a registered user can log restaurants t
 - **Objective:** Give developers immediate feedback at commit time when a message doesn't follow Conventional Commits (previously only caught in CI on PRs).
 - **Implementation:** Added Husky (`prepare: husky` script installs hooks on `npm install`) and a `.husky/commit-msg` hook that runs `commitlint --edit`. Malformed messages abort the commit locally; the CI `commitlint` job remains the authoritative, non-bypassable gate.
 - **Verified:** invoking the hook script directly (as git does, with the message-file path) — a non-conventional message exits 1 with the specific errors, a valid `feat:`/`fix:` message exits 0. Husky's `.husky/_/` internals are gitignored by Husky itself; `.husky/commit-msg` is committed so it reaches all contributors.
+
+---
+
+### Post-plan addition: PostgreSQL upgrade to 17 ✓
+- **Objective:** Run the latest stable PostgreSQL rather than the older versions the scaffold started with.
+- **Implementation:** Aurora `engine_version` bumped `15.4` → `17.10` (the latest PostgreSQL 17 supported by Aurora Serverless v2); local `docker-compose.yml` `postgres` and `postgres_test` images bumped `16-alpine` → `17-alpine`. Chose 17 over the newest major (18) as the mature, well-supported "latest" for Serverless v2.
+- **Verified:** `terraform validate` passes; a fresh `postgres_test` container runs PostgreSQL 17.11 locally; the Prisma migration applies cleanly; all 41 tests pass against PG17.
+- **Note:** For an already-deployed cluster, changing `engine_version` triggers a major-version upgrade on the next `terraform apply` — review the plan before applying in that case. On a fresh deploy it simply provisions 17 from the start.

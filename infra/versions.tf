@@ -5,8 +5,11 @@ terraform {
 
   required_providers {
     aws = {
-      source  = "hashicorp/aws"
-      version = "~> 5.60"
+      source = "hashicorp/aws"
+      # 6.23+ is required to consume credentials from `aws login`
+      # (~/.aws/login/cache). 5.x only understands env vars, shared
+      # credentials files, SSO, and IMDS.
+      version = "~> 6.23"
     }
     random = {
       source  = "hashicorp/random"
