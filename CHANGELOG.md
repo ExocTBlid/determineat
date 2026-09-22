@@ -1,3 +1,10 @@
+## [1.0.2](https://github.com/ExocTBlid/determineat/compare/v1.0.1...v1.0.2) (2026-09-22)
+
+
+### Bug Fixes
+
+* tolerate unique-ID OIDC sub claims in deploy role trust ([bad2fa3](https://github.com/ExocTBlid/determineat/commit/bad2fa3ab2334d2f09b2d251b8a1ec8c0ef6b73f))
+
 ## [1.0.1](https://github.com/ExocTBlid/determineat/compare/v1.0.0...v1.0.1) (2026-09-22)
 
 
