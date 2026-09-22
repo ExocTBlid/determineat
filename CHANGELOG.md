@@ -1,3 +1,10 @@
+## [1.0.1](https://github.com/ExocTBlid/determineat/compare/v1.0.0...v1.0.1) (2026-09-22)
+
+
+### Bug Fixes
+
+* use real GitHub OIDC thumbprint in bootstrap ([5120427](https://github.com/ExocTBlid/determineat/commit/5120427884b5dd86376d526da07d1c8761262862))
+
 # 1.0.0 (2026-09-22)
 
 
