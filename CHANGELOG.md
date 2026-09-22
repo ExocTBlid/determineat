@@ -1,3 +1,10 @@
+## [1.0.4](https://github.com/ExocTBlid/determineat/compare/v1.0.3...v1.0.4) (2026-09-22)
+
+
+### Bug Fixes
+
+* bump CI Terraform to 1.10.5 to satisfy required_version ([25d9f9f](https://github.com/ExocTBlid/determineat/commit/25d9f9f9821987dccc64ef25c015612ee7e5aa47))
+
 ## [1.0.3](https://github.com/ExocTBlid/determineat/compare/v1.0.2...v1.0.3) (2026-09-22)
 
 
