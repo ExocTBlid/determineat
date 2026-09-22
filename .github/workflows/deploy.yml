@@ -17,7 +17,7 @@ permissions:
 
 env:
   NODE_VERSION: '22'
-  TERRAFORM_VERSION: '1.9.8'
+  TERRAFORM_VERSION: '1.10.5'
 
 jobs:
   # ---------------------------------------------------------------------------
