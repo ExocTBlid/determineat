@@ -191,7 +191,13 @@ def ensure_oidc_provider(session) -> str:
 # ---------------------------------------------------------------------------
 
 def _trust_policy(provider_arn: str, github_repo: str, branches: list[str]) -> dict:
-    subs = [f"repo:{github_repo}:ref:refs/heads/{b}" for b in branches]
+    # GitHub accounts/orgs with "Use unique repository/actor IDs in OIDC claims"
+    # enabled issue a `sub` like `repo:OWNER@<id>/REPO@<id>:ref:...` instead of
+    # `repo:OWNER/REPO:ref:...`. Insert `*` after the owner and repo so the
+    # StringLike match works whether or not the numeric IDs are present.
+    owner, _, repo = github_repo.partition("/")
+    sub_repo = f"{owner}*/{repo}*" if repo else f"{github_repo}*"
+    subs = [f"repo:{sub_repo}:ref:refs/heads/{b}" for b in branches]
     return {
         "Version": "2012-10-17",
         "Statement": [
