@@ -16,7 +16,7 @@ permissions:
   pull-requests: write
 
 env:
-  NODE_VERSION: '20'
+  NODE_VERSION: '22'
   TERRAFORM_VERSION: '1.9.8'
 
 jobs:
@@ -65,6 +65,24 @@ jobs:
 
       - name: Start test database
         run: docker compose up -d postgres_test
+
+      - name: Wait for test database to be healthy
+        run: |
+          # The container is "up" before Postgres accepts connections. Wait for
+          # the compose healthcheck to report healthy so the migration doesn't
+          # race the DB startup (P1001 "can't reach database server").
+          for i in $(seq 1 30); do
+            status="$(docker inspect determineat-postgres_test-1 --format '{{.State.Health.Status}}' 2>/dev/null || echo unknown)"
+            if [ "$status" = "healthy" ]; then
+              echo "Database is healthy."
+              exit 0
+            fi
+            echo "Waiting for database (attempt $i, status: $status)..."
+            sleep 2
+          done
+          echo "Database did not become healthy in time." >&2
+          docker compose logs postgres_test >&2
+          exit 1
 
       - name: Apply migrations to test database
         run: npm run db:migrate:deploy --workspace @determineat/backend

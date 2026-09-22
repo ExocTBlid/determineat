@@ -154,3 +154,11 @@ Build a secure, full-stack web app where a registered user can log restaurants t
 - **Implementation:** Aurora `engine_version` bumped `15.4` → `17.10` (the latest PostgreSQL 17 supported by Aurora Serverless v2); local `docker-compose.yml` `postgres` and `postgres_test` images bumped `16-alpine` → `17-alpine`. Chose 17 over the newest major (18) as the mature, well-supported "latest" for Serverless v2.
 - **Verified:** `terraform validate` passes; a fresh `postgres_test` container runs PostgreSQL 17.11 locally; the Prisma migration applies cleanly; all 41 tests pass against PG17.
 - **Note:** For an already-deployed cluster, changing `engine_version` triggers a major-version upgrade on the next `terraform apply` — review the plan before applying in that case. On a fresh deploy it simply provisions 17 from the start.
+
+---
+
+### Post-plan fix: CI test-database race ✓
+- **Problem:** The `test` job ran `prisma migrate deploy` immediately after `docker compose up -d postgres_test`. The container was "up" but Postgres wasn't accepting connections yet, so every run failed with `P1001: Can't reach database server at localhost:5433`. (Same startup race handled locally during development, but the workflow never had the health-gate.)
+- **Diagnosis:** Read the failing run logs via the `gh` CLI (`gh run view <id> --log-failed`) — the migrate step was the failure point on all recent runs.
+- **Fix:** Added a "Wait for test database to be healthy" step that polls `docker inspect determineat-postgres_test-1` for `Health.Status = healthy` (up to ~60s) before migrating. Also bumped `NODE_VERSION` 20 → 22 (GitHub runners now force Node 24 and warn on 20; 22 is current LTS and satisfies `engines: >=20`).
+- **Verified:** workflow YAML parses; the exact health-gate loop + migration verified locally under bash (CI's shell) against the pg17 `postgres_test` container. Confirmed the compose container name matches what the workflow references.
