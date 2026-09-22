@@ -29,7 +29,11 @@ After it runs, it prints the values to set as GitHub repository variables.
 from __future__ import annotations
 
 import argparse
+import hashlib
 import json
+import re
+import ssl
+import subprocess
 import sys
 
 try:
@@ -114,23 +118,68 @@ def _bucket_exists(s3, bucket_name: str) -> bool:
 # GitHub OIDC provider
 # ---------------------------------------------------------------------------
 
+def _github_oidc_thumbprint() -> str:
+    """
+    Compute the SHA-1 thumbprint of the root certificate in GitHub's OIDC TLS
+    chain, formatted as IAM expects (lowercase hex, no colons).
+
+    A real thumbprint is required: STS validates the token's TLS chain against
+    it, so a placeholder value causes `Not authorized to perform
+    sts:AssumeRoleWithWebIdentity` at role-assumption time.
+
+    Uses `openssl s_client` to fetch the full chain (portable across Python
+    versions — `SSLSocket.get_verified_chain()` isn't available everywhere).
+    """
+    proc = subprocess.run(
+        [
+            "openssl", "s_client", "-showcerts",
+            "-servername", GITHUB_OIDC_HOST,
+            "-connect", f"{GITHUB_OIDC_HOST}:443",
+        ],
+        input="",
+        capture_output=True,
+        text=True,
+        timeout=20,
+    )
+    # Split the PEM blocks; the last certificate in the chain is the root.
+    certs = re.findall(
+        r"-----BEGIN CERTIFICATE-----.*?-----END CERTIFICATE-----",
+        proc.stdout,
+        re.DOTALL,
+    )
+    if not certs:
+        raise SystemExit("Could not retrieve GitHub OIDC certificate chain via openssl.")
+    root_pem = certs[-1]
+    der = ssl.PEM_cert_to_DER_cert(root_pem)
+    return hashlib.sha1(der).hexdigest()
+
+
 def ensure_oidc_provider(session) -> str:
     iam = session.client("iam")
     account_id = session.client("sts").get_caller_identity()["Account"]
     provider_arn = f"arn:aws:iam::{account_id}:oidc-provider/{GITHUB_OIDC_HOST}"
 
+    thumbprint = _github_oidc_thumbprint()
+
     try:
-        iam.get_open_id_connect_provider(OpenIDConnectProviderArn=provider_arn)
-        print(f"  [=] OIDC provider already exists: {GITHUB_OIDC_HOST}")
+        existing = iam.get_open_id_connect_provider(OpenIDConnectProviderArn=provider_arn)
+        current = [t.lower() for t in existing.get("ThumbprintList", [])]
+        if thumbprint.lower() not in current:
+            # Repair a provider that has a stale/placeholder thumbprint
+            iam.update_open_id_connect_provider_thumbprint(
+                OpenIDConnectProviderArn=provider_arn,
+                ThumbprintList=[thumbprint],
+            )
+            print(f"  [~] OIDC provider exists; updated thumbprint: {GITHUB_OIDC_HOST}")
+        else:
+            print(f"  [=] OIDC provider already exists with correct thumbprint: {GITHUB_OIDC_HOST}")
     except ClientError as e:
         if e.response["Error"]["Code"] != "NoSuchEntity":
             raise
-        # Thumbprint is no longer used by AWS for verification, but the API
-        # still requires the field; a well-known placeholder is accepted.
         iam.create_open_id_connect_provider(
             Url=GITHUB_OIDC_URL,
             ClientIDList=[GITHUB_OIDC_AUDIENCE],
-            ThumbprintList=["ffffffffffffffffffffffffffffffffffffffff"],
+            ThumbprintList=[thumbprint],
         )
         print(f"  [+] Created OIDC provider: {GITHUB_OIDC_HOST}")
 
