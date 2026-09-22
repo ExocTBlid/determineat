@@ -1,0 +1,14 @@
+# 1.0.0 (2026-09-22)
+
+
+### Bug Fixes
+
+* generate prisma client on install via postinstall hook ([4905552](https://github.com/ExocTBlid/determineat/commit/4905552f2bd0909125dad24a3309fcdd54383873))
+* skip husky commit-msg hook in CI ([3612d81](https://github.com/ExocTBlid/determineat/commit/3612d812cadb49db602d7a8d254a1c676339f84e))
+* updating postgres version and aws provider ([bb15d31](https://github.com/ExocTBlid/determineat/commit/bb15d31e9f4806a93524021ec7d96afe7975a0b0))
+* wait for test database health in CI before migrating ([ca85fb9](https://github.com/ExocTBlid/determineat/commit/ca85fb9cca131d554ffa10eaa360fe417314af86))
+
+
+### Features
+
+* adding commit hooks ([cc16555](https://github.com/ExocTBlid/determineat/commit/cc16555e32db7dc6143d0ba5047bc0a4d809d132))
