@@ -1,1 +1,6 @@
+# Skip in CI: hooks are a local-dev convenience. In CI the `commitlint` job
+# validates PR commits, and tools like semantic-release make their own commits
+# (whose bodies carry release notes that intentionally exceed commitlint rules).
+[ -n "$CI" ] && exit 0
+
 npx --no -- commitlint --edit "$1"
