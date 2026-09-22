@@ -1,3 +1,10 @@
+## [1.0.3](https://github.com/ExocTBlid/determineat/compare/v1.0.2...v1.0.3) (2026-09-22)
+
+
+### Bug Fixes
+
+* copy prisma schema before install in Docker build ([baaf22a](https://github.com/ExocTBlid/determineat/commit/baaf22acc24e56997689db147c525e9180773029))
+
 ## [1.0.2](https://github.com/ExocTBlid/determineat/compare/v1.0.1...v1.0.2) (2026-09-22)
 
 
