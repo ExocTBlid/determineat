@@ -257,6 +257,12 @@ job assumes an IAM role instead of storing long-lived AWS keys in GitHub.
 3. **release** — `semantic-release` computes the next version from the commit
    history, tags the repo, updates `CHANGELOG.md` + `package.json`, and creates
    a GitHub Release. Outputs the version for the build step.
+
+> **Deploy toggle:** the `release`, `build`, and `deploy` jobs only run when the
+> `DEPLOY_ENABLED` repository variable is set to `'true'`. Leave it unset (or any
+> other value) to run tests and commit linting only, without releasing, building,
+> or deploying. Set it to `true` to enable the full pipeline.
+
 4. **build** — Assumes the deploy role via OIDC, logs in to ECR, builds the
    multi-stage image (baking the `VITE_*` Cognito values in at build time), and
    pushes it tagged with the **semantic version** (falling back to the git SHA
@@ -282,6 +288,7 @@ With OIDC none of these are secrets — they are non-sensitive identifiers:
 
 | Variable | Description |
 |---|---|
+| `DEPLOY_ENABLED` | Set to `true` to enable the release, build, and deploy jobs. Unset/any other value runs tests only. |
 | `AWS_ROLE_ARN` | Deploy role ARN (`terraform output github_actions_role_arn`) |
 | `AWS_REGION` | AWS region (e.g., `us-east-1`) |
 | `ECR_REPOSITORY` | ECR repository name (the `project_name`, e.g. `determineat`) |
@@ -294,8 +301,9 @@ With OIDC none of these are secrets — they are non-sensitive identifiers:
 
 > **Order of operations:** run `bootstrap.py` first (creates the state bucket +
 > deploy role), then the first `terraform apply` locally (creates the app
-> infrastructure), then set the repository variables from the outputs. After
-> that, pushes to `main` deploy automatically via the pipeline.
+> infrastructure), then set the repository variables from the outputs, and set
+> `DEPLOY_ENABLED=true` to turn on the pipeline. After that, pushes to `main`
+> deploy automatically via the pipeline.
 
 ---
 

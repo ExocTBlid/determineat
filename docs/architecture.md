@@ -189,6 +189,11 @@ AWS keys are stored in GitHub. Runner tooling is pinned: Node via
 `setup-node@v4`, Terraform via `hashicorp/setup-terraform@v3` (GitHub runners
 do not ship Terraform).
 
+The `release`, `build`, and `deploy` jobs are gated on the `DEPLOY_ENABLED`
+repository variable (`== 'true'`). When it is unset, only `commitlint` and
+`test` run, so CI stays green without releasing or deploying. Set it to `true`
+to enable the full pipeline.
+
 ```
 pull request                     push to main
      │                                │
