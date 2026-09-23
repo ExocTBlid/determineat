@@ -81,6 +81,7 @@ environments below.
 | `VITE_COGNITO_USER_POOL_ID` | `us-east-1_ABC123xyz` | Terraform output |
 | `VITE_COGNITO_CLIENT_ID` | `1a2b3c4d5e6f7g8h9i0j` | Terraform output (public app client) |
 | `VITE_AWS_REGION` | `us-east-1` | Deployment region |
+| `VITE_AUTH_MODE` | `dev` | Optional. `dev` skips the Cognito sign-in UI (local dev only) |
 
 Consumed by `frontend/src/amplifyConfig.ts` via `Amplify.configure(...)`.
 
@@ -91,6 +92,7 @@ Consumed by `frontend/src/amplifyConfig.ts` via `Amplify.configure(...)`.
 | `COGNITO_USER_POOL_ID` | `us-east-1_ABC123xyz` | Terraform output (same pool as frontend) |
 | `COGNITO_CLIENT_ID` | `1a2b3c4d5e6f7g8h9i0j` | Terraform output (same client as frontend) |
 | `AWS_REGION` | `us-east-1` | Deployment region |
+| `AUTH_MODE` | `dev` | Optional. `dev` bypasses JWT verification (local dev only; refused in production) |
 
 Consumed by `backend/src/middleware/auth.ts` via `CognitoJwtVerifier.create(...)`.
 
@@ -155,10 +157,37 @@ a network call. Reference:
 ## Local Development Without a Real Pool
 
 The unit/integration tests **mock** `aws-jwt-verify` and `@aws-amplify/ui-react`,
-so no live Cognito pool is needed to run the test suite. To exercise the real
-sign-in flow locally, you need an actual user pool — set the `VITE_COGNITO_*` and
-`COGNITO_*` variables to a real pool created via Terraform (Task 8) or the AWS
-console.
+so no live Cognito pool is needed to run the test suite.
+
+For interactive local development there are two options:
+
+### Option 1 — Dev auth bypass (default for local dev)
+
+Set `AUTH_MODE=dev` (backend) and `VITE_AUTH_MODE=dev` (frontend). This skips
+Cognito entirely:
+
+- **Backend** (`src/middleware/auth.ts`): `requireAuth` injects a fixed dev user
+  (`sub: dev-user-…`, `email: dev@determineat.local`) and does **not** verify any
+  token. All `/api/*` requests are authorized as that user.
+- **Frontend** (`src/App.tsx`): the Amplify Authenticator is skipped and the app
+  renders directly as the dev user. The API client sends a placeholder bearer
+  token, which the backend ignores in dev mode.
+
+This is the default in `docker-compose.yml` (`AUTH_MODE` defaults to `dev`) and in
+the `.env.example` templates, so the scripted dev stack (`./scripts/dev-up.sh`)
+works with no AWS resources.
+
+> **Safety:** the bypass is guarded so it can never run in production. It
+> activates only when `AUTH_MODE=dev` **and** `NODE_ENV !== 'production'`, and the
+> backend **refuses to start** (throws at startup, see `assertDevAuthSafe`) if
+> `AUTH_MODE=dev` is combined with `NODE_ENV=production`. The production image
+> sets `NODE_ENV=production` and does not set `AUTH_MODE`.
+
+### Option 2 — Real Cognito pool
+
+To exercise the real sign-in flow locally, leave `AUTH_MODE` / `VITE_AUTH_MODE`
+unset and set the `VITE_COGNITO_*` and `COGNITO_*` variables to a real pool
+created via Terraform (Task 8) or the AWS console.
 
 ---
 

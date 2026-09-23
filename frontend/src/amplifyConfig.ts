@@ -11,7 +11,11 @@ export function configureAmplify(): void {
   const userPoolId = import.meta.env.VITE_COGNITO_USER_POOL_ID;
   const userPoolClientId = import.meta.env.VITE_COGNITO_CLIENT_ID;
 
-  if (!userPoolId || !userPoolClientId) {
+  // In dev-auth mode (VITE_AUTH_MODE=dev) Cognito is bypassed entirely, so
+  // missing pool vars are expected — don't warn about them.
+  const devAuth = import.meta.env.VITE_AUTH_MODE === 'dev';
+
+  if (!devAuth && (!userPoolId || !userPoolClientId)) {
     // Surface a clear message in dev rather than a cryptic Amplify error
     console.warn(
       'Cognito env vars missing (VITE_COGNITO_USER_POOL_ID / VITE_COGNITO_CLIENT_ID). ' +

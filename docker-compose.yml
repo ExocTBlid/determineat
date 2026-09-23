@@ -43,6 +43,11 @@ services:
       DATABASE_URL: postgresql://postgres:postgres@postgres:5432/determineat
       PORT: "3000"
       NODE_ENV: development
+      # Local dev auth bypass — defaults to "dev" so the containerized dev stack
+      # runs without a live Cognito pool. Override with AUTH_MODE= to force real
+      # JWT verification. Never applies to the production image (built separately
+      # via the root Dockerfile / ECS task definition).
+      AUTH_MODE: ${AUTH_MODE-dev}
       # Cognito values are optional for local dev until Task 3
       COGNITO_USER_POOL_ID: ${COGNITO_USER_POOL_ID:-placeholder}
       COGNITO_CLIENT_ID: ${COGNITO_CLIENT_ID:-placeholder}

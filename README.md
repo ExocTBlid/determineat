@@ -48,12 +48,44 @@ Built with TypeScript full-stack (React + Express), deployed to AWS ECS Fargate 
 - [AWS CLI](https://aws.amazon.com/cli/) (for deployment)
 - [Terraform](https://www.terraform.io/) v1.5+ (for infrastructure)
 
-> **Heads up on authentication:** the app authenticates against a real AWS Cognito
-> user pool. Without one, the backend and `/health` still run, but you can't log in
-> through the UI or call the `/api/*` endpoints (they require a valid Cognito JWT).
-> The full test suite runs without any AWS resources. To exercise the real sign-in
-> flow, provision Cognito via Terraform (Task 8) or create a pool manually — see
-> [`docs/cognito.md`](docs/cognito.md).
+> **Heads up on authentication:** by default local dev uses a **dev auth bypass**
+> (`AUTH_MODE=dev` / `VITE_AUTH_MODE=dev`) so you can run the full app with no AWS
+> Cognito pool — every request runs as a fixed dev user
+> (`dev@determineat.local`) and the sign-in UI is skipped. This is the default in
+> `docker-compose.yml` and the `.env.example` templates. The bypass is guarded so
+> it can never run in production (the backend refuses to start if `AUTH_MODE=dev`
+> and `NODE_ENV=production`). To exercise the **real** Cognito sign-in flow
+> instead, unset `AUTH_MODE`/`VITE_AUTH_MODE` and point the `COGNITO_*` /
+> `VITE_COGNITO_*` vars at a real pool (provision via Terraform, Task 8, or create
+> one manually) — see [`docs/cognito.md`](docs/cognito.md). The full test suite
+> runs without any AWS resources either way.
+
+### Quick Start (scripted)
+
+If you just want the whole stack running, use the helper scripts:
+
+```bash
+./scripts/dev-up.sh     # or: npm run dev:up
+```
+
+This creates the `.env` files from the templates (if missing), installs npm
+dependencies (if missing), starts PostgreSQL + the backend in Docker, and
+launches the frontend Vite dev server in the background (logs stream to
+`scripts/.frontend-dev.log`). When it finishes you'll have:
+
+- backend API at `http://localhost:3000` (health at `/health`)
+- frontend UI at `http://localhost:5173`
+- PostgreSQL at `localhost:5432`
+
+Tear everything down with:
+
+```bash
+./scripts/dev-down.sh              # or: npm run dev:down — stops containers, keeps DB data
+./scripts/dev-down.sh --volumes    # also delete the Postgres volume for a clean slate
+```
+
+For manual, step-by-step control (or to run the backend on the host instead of
+in Docker), follow the steps below.
 
 ### Getting Started
 
@@ -131,6 +163,10 @@ AWS_REGION=us-east-1
 # App
 PORT=3000
 NODE_ENV=development
+
+# Local dev auth bypass — "dev" skips Cognito JWT verification (local dev only;
+# the server refuses to start if this is "dev" while NODE_ENV=production)
+AUTH_MODE=dev
 ```
 
 **`frontend/.env`**
@@ -140,6 +176,9 @@ VITE_COGNITO_USER_POOL_ID=us-east-1_xxxxxxxxx
 VITE_COGNITO_CLIENT_ID=xxxxxxxxxxxxxxxxxxxxxxxxxx
 VITE_AWS_REGION=us-east-1
 VITE_API_URL=http://localhost:3000
+
+# Local dev auth bypass — "dev" skips the Cognito sign-in UI (must match backend)
+VITE_AUTH_MODE=dev
 ```
 
 > The backend leaves `/health` and server startup working even with placeholder

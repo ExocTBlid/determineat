@@ -68,7 +68,7 @@ determineat/
 │   │   ├── test/           # Test setup (jest-dom)
 │   │   ├── amplifyConfig.ts # Cognito/Amplify configuration
 │   │   ├── vite-env.d.ts   # Typed VITE_ env vars
-│   │   ├── App.tsx         # Authenticator + authenticated shell
+│   │   ├── App.tsx         # Authenticator + shell (or dev-auth bypass)
 │   │   └── main.tsx        # Amplify.configure + Authenticator.Provider
 │   ├── index.html
 │   ├── vite.config.ts
@@ -121,6 +121,9 @@ determineat/
 ├── .kiro/
 │   └── steering/
 │       └── documentation.md
+├── scripts/
+│   ├── dev-up.sh           # Launch local dev env (postgres + backend + frontend)
+│   └── dev-down.sh         # Tear down local dev env (--volumes to wipe the DB)
 ├── docker-compose.yml      # Local development (postgres + backend)
 ├── Dockerfile              # Production multi-stage build (SPA served by Express)
 ├── .dockerignore
@@ -164,6 +167,11 @@ Indexes: restaurants(userId)
 All `/api/*` routes require a valid Cognito access token in the
 `Authorization: Bearer <token>` header. Every query is scoped to the
 authenticated user's `sub` claim, so users can only ever see their own data.
+
+> **Local dev bypass:** when `AUTH_MODE=dev` (and `NODE_ENV !== 'production'`),
+> `requireAuth` skips JWT verification and injects a fixed dev user instead. This
+> is for local development only — the backend refuses to start if `AUTH_MODE=dev`
+> is set while `NODE_ENV=production`. See [`cognito.md`](cognito.md).
 
 | Method | Path | Auth | Description | Success |
 |---|---|---|---|---|

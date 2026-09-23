@@ -58,6 +58,7 @@ Build a secure, full-stack web app where a registered user can log restaurants t
 - **Tests:** Jest + Supertest — test that `/health` returns 200, `/api/me` with no token returns 401, and `/api/me` with a valid mock JWT returns 200 with user info (mock the JWT verifier)
 - **Demo:** `curl localhost:3000/health` → 200; `curl localhost:3000/api/me` without token → 401
 - **Completed:** `aws-jwt-verify` 4.0.1 added. `src/middleware/auth.ts` — `requireAuth` middleware using `CognitoJwtVerifier`, strips Bearer prefix, returns 401 on missing/malformed/invalid token. `src/types/express.d.ts` — augments `Express.Request` with `req.user?: CognitoAccessTokenPayload`. `src/routes/me.ts` — `GET /api/me` returns `{sub, username, email}`. `app.ts` updated with `/api/me` route and 4-param global error handler. 5 new auth tests (mocking `aws-jwt-verify`) plus health test updated to include mock. All 14 tests pass.
+- **Later addition (dev auth bypass):** `AUTH_MODE=dev` (backend) / `VITE_AUTH_MODE=dev` (frontend) skip Cognito entirely for local dev, injecting a fixed dev user so the app runs with no live pool. `requireAuth` short-circuits when `isDevAuthEnabled()` (requires `NODE_ENV !== 'production'`); `assertDevAuthSafe()` (called from `index.ts`) throws at startup if `AUTH_MODE=dev` is combined with `NODE_ENV=production`. Frontend `App.tsx` renders directly (no `Authenticator`) and `api/client.ts` sends a placeholder token in dev mode. Defaulted to `dev` in `docker-compose.yml`. See `docs/cognito.md`.
 
 ---
 

@@ -8,6 +8,8 @@
   ],
   "scripts": {
     "dev": "docker compose up",
+    "dev:up": "./scripts/dev-up.sh",
+    "dev:down": "./scripts/dev-down.sh",
     "test": "npm run test --workspaces --if-present",
     "lint": "npm run lint --workspaces --if-present",
     "typecheck": "npm run typecheck --workspaces --if-present",

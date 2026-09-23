@@ -14,7 +14,16 @@ import type { Restaurant, RestaurantInput } from '../types/restaurant.js';
 
 const API_BASE = import.meta.env.VITE_API_URL ?? '';
 
+// Dev auth bypass — mirrors the backend's AUTH_MODE=dev. When enabled we skip
+// the Amplify session entirely (there is no signed-in Cognito user in dev mode)
+// and send a placeholder token. The backend ignores the token value when its
+// own AUTH_MODE=dev is set. See docs/cognito.md.
+const DEV_AUTH = import.meta.env.VITE_AUTH_MODE === 'dev';
+
 async function authHeader(): Promise<Record<string, string>> {
+  if (DEV_AUTH) {
+    return { Authorization: 'Bearer dev-auth-bypass' };
+  }
   const session = await fetchAuthSession();
   const token = session.tokens?.accessToken?.toString();
   if (!token) {
