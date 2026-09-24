@@ -140,27 +140,34 @@ determineat/
 
 ## Data Model
 
-```
-User
-├── id              String    @id  (Cognito sub)
-├── createdAt       DateTime  @default(now())
-└── restaurants     Restaurant[]
+```mermaid
+erDiagram
+    users ||--o{ restaurants : "has"
 
-Restaurant
-├── id              String    @id @default(cuid())
-├── userId          String    (FK → User.id, cascade delete)
-├── name            String
-├── cuisineType     String
-├── googleMapsUrl   String?
-├── visitDate       DateTime  @db.Date
-├── rating          Int       (1–5)
-├── wouldVisitAgain Boolean
-├── notes           String?
-├── createdAt       DateTime  @default(now())
-└── updatedAt       DateTime  @updatedAt
+    users {
+        string id PK "Cognito sub"
+        datetime created_at
+    }
 
-Indexes: restaurants(userId)
+    restaurants {
+        string id PK "cuid"
+        string user_id FK
+        string name
+        string cuisine_type
+        string google_maps_url "nullable"
+        date visit_date
+        int rating "1-5"
+        boolean would_visit_again
+        string notes "nullable"
+        datetime created_at
+        datetime updated_at
+    }
 ```
+
+A `User` has many `Restaurant` records; each `Restaurant` belongs to exactly one
+`User` (`user_id` FK → `users.id`, `onDelete: Cascade`). The `restaurants` table
+is indexed on `user_id`. Column names above are the mapped database names
+(`@map`); the Prisma model fields use camelCase.
 
 ## API Endpoints
 
