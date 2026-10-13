@@ -397,6 +397,8 @@ The config lives in `commitlint.config.cjs`; the release config in
 
 See [`docs/architecture.md`](docs/architecture.md) for the full architecture diagram, component breakdown, and technology decision rationale.
 
+For a detailed AWS infrastructure diagram (VPC, subnets, security groups, and the Terraform resource layout), see [`docs/infrastructure.md`](docs/infrastructure.md). For a rough monthly cost estimate, see [`docs/cost-estimate.md`](docs/cost-estimate.md). For a design exercise comparing the same infra on Azure, see [`docs/azure-alternative.md`](docs/azure-alternative.md).
+
 For the AWS Cognito setup — user pool and app client requirements, token model, and how the app verifies JWTs — see [`docs/cognito.md`](docs/cognito.md).
 
 ```

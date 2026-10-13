@@ -17,6 +17,13 @@ graph TD
     end
 ```
 
+> For a detailed AWS infrastructure view (VPC, subnets, AZs, NAT/IGW,
+> security-group traffic flow, and the Terraform module/resource layout), see
+> [`infrastructure.md`](./infrastructure.md). For a rough monthly cost estimate,
+> see [`cost-estimate.md`](./cost-estimate.md). For a what-if comparison of the
+> same infra on Azure, see [`azure-alternative.md`](./azure-alternative.md)
+> (design exercise only — the real target is AWS).
+
 ## Component Responsibilities
 
 | Component | Responsibility |
@@ -25,7 +32,7 @@ graph TD
 | **Express backend** | REST API, JWT validation, business logic, static file serving |
 | **Prisma ORM** | Type-safe database access, schema migrations |
 | **AWS Cognito** | User registration, authentication, JWT issuance |
-| **Aurora Serverless v2** | Primary data store (PostgreSQL-compatible), scales to zero when idle |
+| **Aurora Serverless v2** | Primary data store (PostgreSQL-compatible); configured with `min_capacity = 0` so it auto-pauses (scales to zero) when idle |
 | **ECS Fargate** | Runs the single Docker container, replaces unhealthy tasks automatically |
 | **ALB** | HTTPS termination, routes traffic to ECS tasks, health checking |
 | **ECR** | Docker image registry, stores images tagged with the semantic version |
@@ -209,7 +216,7 @@ repository variable (`== 'true'`). When it is unset, only `commitlint` and
 `test` run, so CI stays green without releasing or deploying. Set it to `true`
 to enable the full pipeline.
 
-```
+```text
 pull request                     push to main
      │                                │
      ▼                                ▼
