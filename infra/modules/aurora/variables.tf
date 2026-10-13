@@ -29,7 +29,7 @@ variable "master_username" {
 }
 
 variable "min_capacity" {
-  description = "Serverless v2 minimum ACU"
+  description = "Serverless v2 minimum ACU. 0 enables auto-pause (scale to zero when idle)."
   type        = number
 }
 

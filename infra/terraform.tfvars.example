@@ -23,5 +23,8 @@ acm_certificate_arn = ""
 app_domain_url      = ""
 
 # Database sizing (Aurora Serverless v2 ACUs)
-aurora_min_capacity = 0.5
+# min_capacity = 0 enables auto-pause: the cluster scales to zero and stops
+# billing compute after a period of inactivity, resuming on the next connection
+# (cold start of a few seconds). Set to 0.5 to keep it always warm instead.
+aurora_min_capacity = 0
 aurora_max_capacity = 2

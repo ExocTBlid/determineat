@@ -62,6 +62,12 @@ resource "aws_rds_cluster" "this" {
   skip_final_snapshot       = true
   final_snapshot_identifier = null
 
+  # A min_capacity of 0 enables auto-pause: Aurora scales to zero and stops
+  # billing for compute after a period of inactivity (AWS default: 5 minutes
+  # with no user connections), then resumes on the next connection with a
+  # cold start of a few seconds. Requires engine 17.x / a platform version that
+  # supports auto-pause (this cluster runs aurora-postgresql 17.10). Set
+  # min_capacity to 0.5 to keep the DB always warm instead.
   serverlessv2_scaling_configuration {
     min_capacity = var.min_capacity
     max_capacity = var.max_capacity

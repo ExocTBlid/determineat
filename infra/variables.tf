@@ -109,9 +109,9 @@ variable "db_master_username" {
 }
 
 variable "aurora_min_capacity" {
-  description = "Aurora Serverless v2 minimum ACU (can scale toward 0 when idle on supported versions)"
+  description = "Aurora Serverless v2 minimum ACU. 0 enables auto-pause (scales to zero / stops billing compute when idle, cold start on resume); 0.5 keeps the DB always warm."
   type        = number
-  default     = 0.5
+  default     = 0
 }
 
 variable "aurora_max_capacity" {
